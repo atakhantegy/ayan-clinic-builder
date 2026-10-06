@@ -1,0 +1,1545 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Аян емханасының жаңа ғимаратына арналған анимациялы 3D конструктор: бөлімшелер, кабинеттер, аудандар, нормаға тексеріс.">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}</style>
+</head>
+<body>
+<title>Аян емхана конструкторы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: app shell — left rail (бағдарлама), center maquette (3D / жоспар), right паспорт; below: тексеріс + бөлмелер кестесі */
+:root{
+  --bg:#F1F3F2; --panel:#FFFFFF; --panel-2:#E8EDEB; --line:#D2D9D6; --fg:#16201C; --muted:#5A6863;
+  --accent:#D9480F; --accent-soft:#FCE4D8; --ok:#2B8A3E; --warn:#B86E00; --bad:#C92A2A;
+  --ground:#DCE3E0; --slab:#F8F9F8; --corr:#C5CECA; --stair:#7C8985;
+  --f-display:"Unbounded","IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1311; --panel:#151B19; --panel-2:#1C2421; --line:#2A3430; --fg:#E3EAE7; --muted:#93A09B;
+    --accent:#FF7B47; --accent-soft:#3A2116; --ok:#5CC971; --warn:#F2A33A; --bad:#FF6B6B;
+    --ground:#18201D; --slab:#232B28; --corr:#34403B; --stair:#5D6A66; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1311; --panel:#151B19; --panel-2:#1C2421; --line:#2A3430; --fg:#E3EAE7; --muted:#93A09B;
+  --accent:#FF7B47; --accent-soft:#3A2116; --ok:#5CC971; --warn:#F2A33A; --bad:#FF6B6B;
+  --ground:#18201D; --slab:#232B28; --corr:#34403B; --stair:#5D6A66; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--f-body);margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:1720px;margin:0 auto;padding-inline:16px;padding-block:18px 48px;display:grid;gap:14px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.brand h1{font:700 clamp(20px,2.4vw,28px)/1.1 var(--f-display);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.brand p{margin:6px 0 0;color:var(--muted)}
+.brand .eyebrow{font:500 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px;cursor:pointer;line-height:1.2}
+.btn:hover{border-color:var(--fg)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.small{padding:4px 8px;font-size:12px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.kpi{padding:12px 16px;border-right:1px solid var(--line);min-width:0}
+.kpi:last-child{border-right:0}
+.kpi .l{font:500 10.5px/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:6px;align-items:center}
+.kpi .v{font:500 21px/1.25 var(--f-mono);font-variant-numeric:tabular-nums;margin-top:4px;white-space:nowrap}
+.kpi .s{font-size:12px;color:var(--muted)}
+.tag{font:500 9.5px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;border:1px solid currentColor;border-radius:4px;padding:2px 4px;color:var(--warn)}
+.tag.kz{color:var(--ok)} .tag.rf{color:var(--muted)} .tag.p{color:var(--warn)}
+
+/* work grid */
+.work{display:grid;grid-template-columns:330px minmax(0,1fr) 340px;gap:14px;align-items:start}
+@media (max-width:1320px){.work{grid-template-columns:320px minmax(0,1fr)}.passport{grid-column:1/-1}}
+@media (max-width:880px){.work{grid-template-columns:minmax(0,1fr)}.viewer{order:-1}.stage{height:440px;min-height:0}.stage-hint{display:none}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.panel-h h2{font:600 13px/1.2 var(--f-body);margin:0;letter-spacing:.01em}
+.sec-title{font:500 10.5px/1.2 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0}
+
+/* sidebar */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 4px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.side-body{padding:14px;display:grid;gap:14px;max-height:760px;overflow:auto}
+@media (max-width:880px){.side-body{max-height:none}}
+.field{display:grid;gap:4px}
+.field label{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center;justify-content:space-between}
+.field input[type=number],.field input[type=text],.field select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:7px 9px;font-variant-numeric:tabular-nums}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.calc{display:grid;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.calc div{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:13px}
+.calc div:last-child{border-bottom:0}
+.calc b{font:500 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.calc .hl{background:var(--accent-soft)}
+.note{font-size:12px;color:var(--muted);margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.seg button{border:0;background:none;padding:6px 10px;cursor:pointer;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}
+.chk input{margin-top:3px;accent-color:var(--accent)}
+
+/* departments editor */
+.dgroup{display:grid;gap:6px}
+.dgroup h3{font:500 10.5px/1.2 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:6px 0 0}
+.dept{border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.dept.sel{border-color:var(--accent)}
+.dept.off{opacity:.55}
+.dept-head{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px}
+.dept-head input{accent-color:var(--accent)}
+.sw{width:12px;height:12px;border-radius:3px;background:var(--c);flex:none}
+.dept-name{background:none;border:0;text-align:left;cursor:pointer;padding:0;font-weight:500;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dept-sum{font:500 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.dept-ctl{display:flex;gap:6px;padding:0 10px 8px;flex-wrap:wrap}
+.dept-ctl select{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px;font-size:12px}
+.dept-ctl .btn{padding:2px 8px}
+.rooms{border-top:1px dashed var(--line);padding:8px 10px;display:grid;gap:6px}
+.room-row{display:grid;grid-template-columns:minmax(0,1fr) 46px 12px 56px 24px;gap:4px;align-items:center}
+.room-row input{border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:4px 6px;font-size:12px;min-width:0;width:100%;font-variant-numeric:tabular-nums}
+.room-row .x{color:var(--muted);font-size:11px;text-align:center}
+.room-row .del{border:0;background:none;cursor:pointer;color:var(--muted);font-size:15px;line-height:1}
+.room-row .del:hover{color:var(--bad)}
+.room-row.under input[data-f="area"]{border-color:var(--bad)}
+.rooms-head{display:grid;grid-template-columns:minmax(0,1fr) 46px 12px 56px 24px;gap:4px;font:500 10px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* viewer */
+.viewer{display:grid;grid-template-rows:auto auto auto}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.toolbar .sp{flex:1}
+.stage{position:relative;height:min(620px,72vh);min-height:380px;overflow:hidden;background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%)}
+.stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.plan-wrap{position:absolute;inset:0;overflow:auto;background:var(--panel)}
+.plan-wrap svg{display:block;max-width:none;height:auto}
+.stage-hint{position:absolute;left:12px;bottom:10px;font:400 11px var(--f-mono);color:var(--muted);pointer-events:none;background:color-mix(in srgb,var(--panel) 80%,transparent);padding:3px 6px;border-radius:5px}
+.cam-btns{position:absolute;right:10px;bottom:10px;display:flex;gap:6px}
+.cam-btns button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font:500 15px var(--f-mono)}
+.tip{position:absolute;pointer-events:none;background:var(--fg);color:var(--bg);font-size:12px;padding:6px 8px;border-radius:6px;max-width:240px;transform:translate(12px,12px);z-index:3}
+.tip b{display:block;font-weight:600}
+.fallback{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 8px;padding:10px 12px;border-top:1px solid var(--line)}
+.lg{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:3px 9px 3px 7px;font-size:12px;cursor:pointer;background:var(--panel)}
+.lg[aria-pressed="true"]{border-color:var(--fg);background:var(--panel-2)}
+.lg .f{font:500 10px var(--f-mono);color:var(--muted)}
+.flow-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:0 12px 10px}
+.flow-legend i{display:inline-block;width:18px;height:0;border-top:3px dashed var(--c);vertical-align:middle;margin-right:5px}
+
+/* background picker */
+.bgwrap{display:flex;align-items:center;gap:6px}
+.bgpick{display:flex;gap:5px}
+.bgpick button{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);cursor:pointer;padding:0}
+.bgpick button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
+.stage{color:var(--fg)}
+/* room editor */
+.roomcard textarea{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 9px;font:inherit;font-size:13px;resize:vertical}
+.roomcard .field input{background:var(--panel)}
+.roomcard .seg{background:var(--panel)}
+.ed-h{display:flex;justify-content:space-between;align-items:center}
+.ed-h .del{border:0;background:none;font-size:18px;cursor:pointer;color:var(--muted)}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+.pos{font:500 11px var(--f-mono);color:var(--muted)}
+.sched td.pur{min-width:180px;max-width:320px;color:var(--muted);font-size:12px}
+.pl-side{fill:var(--muted);font-family:var(--f-mono);letter-spacing:.04em}
+.plan-wrap.dragging .pl-room{cursor:grabbing}
+.pl-room[data-key]{cursor:grab}
+.pl-room.drag-src{opacity:.35}
+.pl-room.drop-tgt rect{stroke:var(--accent);stroke-width:.4;stroke-opacity:1;stroke-dasharray:.6 .3}
+.drag-ghost{position:fixed;z-index:30;pointer-events:none;transform:translate(12px,10px);background:var(--fg);color:var(--bg);font-size:12px;padding:5px 9px;border-radius:6px;max-width:240px}
+/* svg plan */
+.pl-room{cursor:pointer}
+.pl-room rect{stroke:var(--fg);stroke-opacity:.55;stroke-width:.08}
+.pl-room:hover rect{stroke:var(--accent);stroke-opacity:1;stroke-width:.18}
+.pl-room.sel rect{stroke:var(--accent);stroke-opacity:1;stroke-width:.3}
+.pl-room.dim{opacity:.28}
+.pl-t{fill:var(--fg);font-family:var(--f-body);pointer-events:none}
+.pl-a{fill:var(--muted);font-family:var(--f-mono);pointer-events:none}
+.pl-corr{fill:var(--panel-2);stroke:none}
+.pl-out{fill:none;stroke:var(--fg);stroke-width:.32}
+.pl-title{fill:var(--fg);font-family:var(--f-display);font-weight:700}
+.pl-dim{stroke:var(--muted);stroke-width:.06;fill:none}
+.pl-dimt{fill:var(--muted);font-family:var(--f-mono)}
+.flow{fill:none;stroke-width:.34;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1.1 .9;animation:dash 1.4s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-2}}
+@media (prefers-reduced-motion:reduce){.flow{animation:none}}
+
+/* passport */
+.passport .body{padding:14px;display:grid;gap:14px}
+.pp-title{display:flex;gap:10px;align-items:flex-start}
+.pp-title .sw{width:16px;height:16px;margin-top:3px}
+.pp-title h3{font:700 16px/1.25 var(--f-display);margin:0;text-wrap:balance}
+.pp-meta{font:400 12px var(--f-mono);color:var(--muted);margin-top:4px}
+.pp p{margin:0}
+.pp ul{margin:0;padding-left:18px;display:grid;gap:5px}
+.pp li{font-size:13px}
+.pp .risk li::marker{color:var(--warn)}
+.mini{width:100%;border-collapse:collapse;font-size:12.5px}
+.mini td{padding:5px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.mini tr{cursor:pointer}
+.mini tr:hover td{background:var(--panel-2)}
+.mini tr.sel td{background:var(--accent-soft)}
+.mini td.n{text-align:right;font-family:var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.roomcard{border:1px solid var(--accent);border-radius:8px;padding:10px 12px;display:grid;gap:6px;background:var(--accent-soft)}
+.roomcard h4{margin:0;font-size:14px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
+.kv span:nth-child(odd){color:var(--muted)}
+
+/* lower */
+.lower{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:1100px){.lower{grid-template-columns:minmax(0,1fr)}}
+.checks{list-style:none;margin:0;padding:6px 0}
+.checks li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;padding:8px 14px;border-bottom:1px solid var(--line)}
+.checks li:last-child{border-bottom:0}
+.st{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:600 11px var(--f-mono);color:var(--bg)}
+.st.ok{background:var(--ok)} .st.warn{background:var(--warn)} .st.bad{background:var(--bad)} .st.info{background:var(--muted)}
+.checks b{font-weight:600;font-size:13px}
+.checks p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.tbl-wrap{overflow:auto;max-height:560px}
+table.sched{width:100%;border-collapse:collapse;font-size:12.5px}
+.sched th{position:sticky;top:0;background:var(--panel-2);text-align:left;font:500 10.5px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.sched td{padding:6px 10px;border-bottom:1px solid var(--line)}
+.sched td.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sched tr.grp td{background:var(--bg);font-weight:600}
+.sched tfoot td{font-weight:600;background:var(--panel-2);position:sticky;bottom:0}
+.sched tr.under td.ar{color:var(--bad)}
+.foot{font-size:12px;color:var(--muted);display:grid;gap:6px}
+.foot a{color:inherit}
+.variants{display:grid;gap:6px}
+.var{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.var .m{font:400 11px var(--f-mono);color:var(--muted)}
+.var .nm{font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.confirm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <p class="eyebrow">Эскизге дейінгі жобалау · ПМСП ғимараты</p>
+      <h1 id="projName">Аян емханасының жаңа ғимараты</h1>
+      <p id="subline">Сарыағаш · 2 қабат</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="btnCsv" hidden>Бөлмелер тізімі · CSV</button>
+      <button class="btn" id="btnJson" hidden>Жоба · JSON</button>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Негізгі көрсеткіштер"></section>
+
+  <div class="work">
+    <!-- sidebar -->
+    <aside class="panel side" aria-label="Бағдарлама">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="cap" aria-selected="true">Қуат</button>
+        <button role="tab" data-tab="depts" aria-selected="false">Бөлімшелер</button>
+        <button role="tab" data-tab="bld" aria-selected="false">Ғимарат</button>
+        <button role="tab" data-tab="vars" aria-selected="false">Нұсқалар</button>
+      </div>
+      <div class="side-body" id="sideBody"></div>
+    </aside>
+
+    <!-- viewer -->
+    <section class="panel viewer" aria-label="Модель">
+      <div class="toolbar">
+        <div class="seg" id="segView">
+          <button data-v="3d" aria-pressed="true">3D модель</button>
+          <button data-v="plan" aria-pressed="false">Қабат жоспары</button>
+        </div>
+        <div class="seg" id="segFloor">
+          <button data-f="all" aria-pressed="true">Екі қабат</button>
+          <button data-f="1" aria-pressed="false">1-қабат</button>
+          <button data-f="2" aria-pressed="false">2-қабат</button>
+        </div>
+        <div class="bgwrap"><span class="sec-title">Фон</span><div class="bgpick" id="bgPick" role="group" aria-label="Фон таңдау"></div></div>
+        <span class="sp"></span>
+        <label class="chk" id="optExplode"><input type="checkbox" id="cbExplode" checked> Қабаттарды ажырату</label>
+        <label class="chk" id="optShell"><input type="checkbox" id="cbShell"> Қасбет</label>
+        <label class="chk" id="optFlows" hidden><input type="checkbox" id="cbFlows" checked> Ағындар</label>
+        <button class="btn small" id="btnReplay">Құрылыс анимациясы</button>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="cv" aria-label="Ғимараттың 3D моделі"></canvas>
+        <div class="plan-wrap" id="planWrap" hidden></div>
+        <div class="tip" id="tip" hidden></div>
+        <div class="stage-hint" id="hint">Айналдыру: тышқанмен сүйреу · Жылжыту: Shift + сүйреу · Масштаб: дөңгелек</div>
+        <div class="cam-btns" id="camBtns">
+          <button id="zIn" aria-label="Жақындату">+</button>
+          <button id="zOut" aria-label="Алыстату">−</button>
+          <button id="zTop" aria-label="Жоғарыдан қарау">⊤</button>
+          <button id="zReset" aria-label="Бастапқы көрініс">⟲</button>
+        </div>
+      </div>
+      <div class="flow-legend" id="flowLegend" hidden>
+        <span><i style="--c:#1C7ED6"></i>Ересек пациенттер</span>
+        <span><i style="--c:#F76707"></i>Балалар (жеке кіреберіс)</span>
+        <span><i style="--c:#E03131"></i>Жедел жәрдем</span>
+        <span><i style="--c:#8D6E63"></i>Медқалдықтар (лас ағын)</span>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <!-- passport -->
+    <aside class="panel passport" aria-label="Бөлімше паспорты">
+      <div class="panel-h"><h2>Бөлімше паспорты</h2><span class="sec-title" id="ppHint">таңдау: модельден немесе тізімнен</span></div>
+      <div class="body pp" id="pp"></div>
+    </aside>
+  </div>
+
+  <div class="lower">
+    <section class="panel" aria-label="Тексеріс">
+      <div class="panel-h"><h2>Нормаға және логикаға тексеріс</h2><span class="sec-title" id="chkSum"></span></div>
+      <ul class="checks" id="checks"></ul>
+    </section>
+    <section class="panel" aria-label="Бөлмелер кестесі">
+      <div class="panel-h"><h2>Бөлмелер кестесі — жобалау тапсырмасына</h2><span class="sec-title" id="schedSum"></span></div>
+      <div class="tbl-wrap"><table class="sched" id="sched"></table></div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    <div><b>Нормалар көзі.</b> <span class="tag kz">ҚР ДСМ-96</span> — <a href="https://adilet.zan.kz/rus/docs/V2000021080" target="_blank" rel="noopener">ҚР ДСМ-96/2020 «Денсаулық сақтау объектілеріне санитариялық-эпидемиологиялық талаптар»</a> (т.101 күндізгі стационар, т.136 стоматология, т.139 физиоем, т.152 стерилизация, т.237 персонал бөлмесі). <span class="tag rf">РФ бағдар</span> — ҚР құжатында нақты сан жоқ жерде РФ СанПиН 2.1.3678-20 минималды аудандары бағдар ретінде алынды. <span class="tag p">Ұсыныс</span> — жобалау тәжірибесі бойынша менің ұсынысым.</div>
+    <div>Бұл — эскизге дейінгі бағдарлама құралы. Аудандар осьтер бойынша (қабырға қалыңдығынсыз) есептелген. Түпкілікті шешім: лицензиясы бар жобалаушы + ҚР СН/СП құрылыс нормалары (өрт қауіпсіздігі, МГН қолжетімділігі, радиациялық қорғаныс) + ведомстводан тыс сараптама. ДСМ-96 қолданыстағы редакциясын жобалау басталар алдында тексеріңіз.</div>
+  </footer>
+</div>
+ <div class="drag-ghost" id="dragGhost" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n, d=0) => Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:d,minimumFractionDigits:d}).replace(/[  ]/g,' ');
+const rid = () => Math.random().toString(36).slice(2,9);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SRC = {KZ:['kz','ҚР ДСМ-96'], RF:['rf','РФ бағдар'], P:['p','Ұсыныс']};
+const WING = {1:'А қанаты', 2:'Б қанаты'};
+const FLOW_C = {adult:'#1C7ED6', kids:'#F76707', ems:'#E03131', waste:'#8D6E63'};
+
+/* ---------- background presets ---------- */
+const LIGHT_V={'--fg':'#16201C','--muted':'#4F5D58','--panel':'#FFFFFF','--panel-2':'#E8EDEB','--corr':'#C5CECA','--slab':'#F8F9F8','--stair':'#7C8985'};
+const BG={
+  studio:{n:'Студия',sw:'linear-gradient(135deg,#FFFFFF,#D9E0DD)',css:'',ground:null,grid:.12,gridC:null,hemi:.75,sun:.75,vars:null},
+  sky:{n:'Аспан',sw:'linear-gradient(180deg,#8EC1EC,#E4F2FA)',css:'linear-gradient(180deg,#8EC1EC 0%,#D4EAF8 55%,#EEF6F1 100%)',ground:'#C7DCB8',grid:.10,gridC:'#6E8F66',hemi:.8,sun:.8,vars:LIGHT_V},
+  steppe:{n:'Дала',sw:'linear-gradient(180deg,#F4C98A,#F7EAD3)',css:'linear-gradient(180deg,#F4CF96 0%,#F7EAD3 60%,#F1E6CF 100%)',ground:'#E2CFA3',grid:.10,gridC:'#9C8457',hemi:.8,sun:.85,vars:LIGHT_V},
+  park:{n:'Жасыл учаске',sw:'linear-gradient(180deg,#BFE3C8,#7FB36A)',css:'linear-gradient(180deg,#D7EEDD 0%,#EEF6EF 100%)',ground:'#9DC487',grid:.08,gridC:'#4E7A3E',hemi:.8,sun:.8,vars:LIGHT_V},
+  paper:{n:'Ватман',sw:'repeating-linear-gradient(0deg,#F7F7F2 0 5px,#E3E6EA 5px 6px)',css:'#F7F7F2',ground:'#F2F2EC',grid:.28,gridC:'#9AA6B2',hemi:.85,sun:.7,vars:LIGHT_V},
+  blueprint:{n:'Сызба',sw:'linear-gradient(135deg,#1C5A94,#0F3A66)',css:'linear-gradient(180deg,#164A80 0%,#0F3A66 100%)',ground:'#174A80',grid:.35,gridC:'#9CC3EA',hemi:.85,sun:.6,
+    vars:{'--fg':'#EAF3FC','--muted':'#A9C6E4','--panel':'#1A4F87','--panel-2':'#21598F','--corr':'#2D6AA6','--slab':'#2A5F96','--stair':'#8FB4DA'}},
+  night:{n:'Түн',sw:'radial-gradient(circle at 50% 20%,#34477A,#0D1326)',css:'radial-gradient(ellipse at 50% 0%,#2B3C6B 0%,#0E1428 72%)',ground:'#141B2C',grid:.16,gridC:'#5D6E99',hemi:.45,sun:.55,
+    vars:{'--fg':'#E6EAF5','--muted':'#9AA4C2','--panel':'#1A2238','--panel-2':'#222B45','--corr':'#2E3858','--slab':'#262F4A','--stair':'#55618A'}}
+};
+let BGK='studio';
+try{ const b=localStorage.getItem('ayan-builder-bg'); if(b&&BG[b]) BGK=b; }catch(e){}
+function applyBg(){
+  const p=BG[BGK]; const st=$('#stage'), pw=$('#planWrap');
+  st.style.background=p.css||''; pw.style.background=p.css||'';
+  const keys=Object.keys(LIGHT_V);
+  [st].forEach(el=>keys.forEach(k=>el.style.removeProperty(k)));
+  if(p.vars) Object.entries(p.vars).forEach(([k,v])=>st.style.setProperty(k,v));
+  document.querySelectorAll('#bgPick button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bg===BGK));
+}
+
+/* ---------- default program ---------- */
+// [атауы, аудан м², саны, нормалық min м², көзі, тегтер]
+const DEPTS0 = [
+ {id:'reception', name:'Тіркеу, сүзгі және КИЗ', short:'Сүзгі · КИЗ', color:'#15AABF', floor:1, wing:1, order:1, rooms:[
+  ['Ересектер сүзгісі (фильтр)',10,1,9,'P','filter'],
+  ['Изолятор-бокс (сыртқа жеке шығуымен)',12,1,9,'P','exit-box'],
+  ['Жұқпалы аурулар кабинеті (КИЗ)',12,1,12,'RF',''],
+  ['Call-орталық және кезек басқару',12,1,0,'P',''],
+  ['Пациенттер санторабы (ер/әйел/МГН)',18,1,0,'P',''],
+  ['Мұрағат (қағаз құжаттар)',9,1,0,'P',''] ]},
+ {id:'lab', name:'Зертхана', short:'Зертхана', color:'#7048E8', floor:1, wing:1, order:2, rooms:[
+  ['Қан алу кабинеті (2 орын)',12,1,9,'RF',''],
+  ['Биоматериал қабылдау',9,1,0,'P',''],
+  ['Клиникалық зертхана',18,1,12,'RF',''],
+  ['Биохимиялық зертхана',18,1,12,'RF',''],
+  ['ИФА / иммунология (гепатит, гормон, D дәрумені)',18,1,12,'RF',''],
+  ['Жуу-залалсыздандыру бөлмесі',9,1,0,'P','waste-src'],
+  ['Зертхана меңгерушісі',9,1,0,'P',''],
+  ['Қақырық жинау бөлмесі',6,1,6,'KZ',''] ]},
+ {id:'radio', name:'Сәулелік және функционалдық диагностика', short:'Диагностика', color:'#3B5BDB', floor:1, wing:1, order:3, rooms:[
+  ['Рентген процедуралық',36,1,36,'RF','xray'],
+  ['Рентген басқару бөлмесі',8,1,0,'RF','xray'],
+  ['Цифрлық флюорография',18,1,0,'P','xray'],
+  ['Маммография',18,1,0,'P','xray'],
+  ['УДЗ кабинеті',16,2,16,'RF',''],
+  ['ЭКГ кабинеті',16,1,16,'RF',''],
+  ['Функционалдық диагностика (СМАД, Холтер, спирография)',16,1,16,'RF',''],
+  ['Сурет сипаттау (дәрігер бөлмесі)',9,1,0,'P',''] ]},
+ {id:'service', name:'Шаруашылық және стерилизация', short:'Шаруашылық', color:'#A1887F', floor:1, wing:1, order:4, rooms:[
+  ['Медқалдықтарды уақытша сақтау (сыртқа шығуымен)',8,1,0,'P','exit-waste'],
+  ['Стерилизация: қабылдау және жуу',9,1,6,'KZ',''],
+  ['Стерилизация және стерильді қойма',12,1,0,'P',''],
+  ['Таза кір қоймасы',6,1,0,'P',''],
+  ['Лас кір бөлмесі',6,1,0,'P',''],
+  ['Жинау құралдары бөлмесі',6,1,0,'P',''],
+  ['Персонал гардеробы (ер)',12,1,0,'P','entrance-staff'],
+  ['Персонал гардеробы (әйел) және душ',18,1,0,'P',''],
+  ['Электр қалқаны және байланыс',9,1,0,'P',''] ]},
+ {id:'ems', name:'Шұғыл көмек және жедел жәрдем', short:'Жедел жәрдем', color:'#E03131', floor:1, wing:1, order:5, rooms:[
+  ['Шұғыл медициналық көмек кабинеті',18,1,0,'P','entrance-ems'],
+  ['Жедел жәрдем бригадасы бөлмесі',12,1,0,'P',''],
+  ['Диспетчерлік',9,1,0,'P',''],
+  ['Дәрі-дәрмек және укладка қоймасы',6,1,0,'P',''],
+  ['Бригада санторабы және душ',9,1,0,'P',''] ]},
+ {id:'mother', name:'Ана мен бала / Әйелдер консультациясы', short:'Ана мен бала', color:'#E64980', floor:1, wing:2, order:1, kids:true, rooms:[
+  ['Акушер-гинеколог кабинеті (қарау орнымен)',18,2,17,'RF',''],
+  ['Акушерка қабылдауы',12,1,12,'RF',''],
+  ['Әйелдерді қарау кабинеті (скрининг)',12,1,12,'RF',''],
+  ['Отбасын жоспарлау кабинеті',12,1,12,'RF',''],
+  ['Жүкті әйелдер мектебі',24,1,0,'P',''] ]},
+ {id:'crrv', name:'ЦРРВ — баланың дамуы және ерте араласу', short:'ЦРРВ', color:'#FAB005', floor:1, wing:2, order:2, kids:true, rooms:[
+  ['Логопед кабинеті',12,1,12,'RF',''],
+  ['Психолог кабинеті',12,1,12,'RF',''],
+  ['Арнайы педагог (дефектолог)',12,1,12,'RF',''],
+  ['Сенсорлық бөлме',18,1,0,'P',''],
+  ['Моторика / балалар ЕДШ залы',24,1,0,'P',''] ]},
+ {id:'peds', name:'Педиатрия және балалар сүзгісі', short:'Педиатрия', color:'#F76707', floor:1, wing:2, order:3, kids:true, rooms:[
+  ['Педиатр кабинеті',12,2,12,'RF',''],
+  ['Сау бала кабинеті',12,1,12,'RF',''],
+  ['Балалар егу кабинеті',12,1,12,'RF',''],
+  ['Балалар емшара кабинеті',12,1,12,'RF','waste-src'],
+  ['Емізу және бала орау бөлмесі',9,1,0,'P',''],
+  ['Балалар санторабы',12,1,0,'P',''],
+  ['Балалар күту және ойын аймағы',24,1,0,'P',''],
+  ['Бокс (сыртқа жеке шығуымен)',15,2,15,'RF','exit-box'],
+  ['Балалар кіреберісі және сүзгі',15,1,0,'P','entrance-kids,filter'] ]},
+ {id:'pmsp', name:'ПМСП: жалпы практика учаскелері', short:'ЖПД учаскелері', color:'#0CA678', floor:2, wing:1, order:1, rooms:[
+  ['ЖПД (ВОП) кабинеті',12,7,12,'RF','auto-uch'],
+  ['Дәрігерге дейінгі қабылдау',12,1,12,'RF',''],
+  ['Скрининг кабинеті',12,1,12,'RF',''],
+  ['СӨС және ауруларды басқару бағдарламасы',12,1,12,'RF',''],
+  ['Әлеуметтік қызметкер және психолог',12,1,12,'RF',''],
+  ['Емшара кабинеті (ересектер)',12,1,12,'RF','waste-src'],
+  ['Егу кабинеті (ересектер)',12,1,12,'RF',''],
+  ['Пациенттер санторабы',18,1,0,'P',''] ]},
+ {id:'spec', name:'Тар мамандар', short:'Тар мамандар', color:'#AE3EC9', floor:2, wing:1, order:2, rooms:[
+  ['Хирург-травматолог',12,1,12,'RF',''],
+  ['Таңу бөлмесі',16,1,16,'RF','waste-src'],
+  ['Невролог',12,1,12,'RF',''],
+  ['Кардиолог',12,1,12,'RF',''],
+  ['Эндокринолог',12,1,12,'RF',''],
+  ['Оториноларинголог (ЛОР)',16,1,12,'P',''],
+  ['Офтальмолог (5 м қашықтық)',18,1,12,'P',''],
+  ['Уролог',12,1,12,'RF',''] ]},
+ {id:'dental', name:'Стоматология', short:'Стоматология', color:'#F59F00', floor:2, wing:1, order:3, rooms:[
+  ['Терапиялық стоматология (2 кресло)',24,1,21,'KZ',''],
+  ['Хирургиялық стоматология',14,1,14,'KZ','waste-src'],
+  ['Балалар стоматологы',14,1,14,'KZ',''],
+  ['Стоматология стерилизациясы',9,1,6,'KZ',''],
+  ['Дентальды рентген (визиограф / ОПТГ)',9,1,0,'P','xray'],
+  ['Компрессорлық',6,1,0,'P',''],
+  ['Стоматология күту аймағы',12,1,0,'P',''] ]},
+ {id:'service2', name:'2-қабат қызметтік бөлмелері', short:'Қызметтік', color:'#A1887F', floor:2, wing:1, order:4, rooms:[
+  ['Жинау құралдары бөлмесі',6,1,0,'P',''],
+  ['Таза және лас кір',9,1,0,'P',''],
+  ['Персонал санторабы',9,1,0,'P',''] ]},
+ {id:'dayhosp', name:'Күндізгі стационар', short:'Күндізгі стационар', color:'#74B816', floor:2, wing:2, order:1, rooms:[
+  ['Палата (4 төсек)',24,2,24,'KZ','beds:4'],
+  ['Палата (2 төсек)',12,1,12,'KZ','beds:2'],
+  ['Мейірбике посты',6,1,0,'P',''],
+  ['Емшара кабинеті',12,1,10,'KZ','waste-src'],
+  ['Дәрігер кабинеті',12,1,10,'KZ',''],
+  ['Күту аймағы',10,1,10,'KZ',''],
+  ['Стационар санторабы',9,1,0,'P',''] ]},
+ {id:'rehab', name:'Оңалту және физиоем', short:'Оңалту', color:'#339AF0', floor:2, wing:2, order:2, rooms:[
+  ['Физиоем залы (6 аппарат)',36,1,36,'KZ',''],
+  ['Ингаляторий',12,1,0,'P',''],
+  ['Массаж кабинеті',12,2,10,'RF',''],
+  ['ЕДШ (ЛФК) залы',48,1,0,'RF',''],
+  ['ЕДШ нұсқаушысы',9,1,0,'P',''],
+  ['Киім ауыстыру бөлмесі',9,1,0,'P',''] ]},
+ {id:'admin', name:'Әкімшілік', short:'Әкімшілік', color:'#868E96', floor:2, wing:2, order:3, rooms:[
+  ['Директор кабинеті',18,1,0,'P',''],
+  ['Қабылдау бөлмесі',12,1,0,'P',''],
+  ['Медициналық бөлім (бас дәрігер орынбасары)',12,1,0,'P',''],
+  ['Бухгалтерия',18,1,0,'P',''],
+  ['Кадр бөлімі',12,1,0,'P',''],
+  ['Сапа және пациентті қолдау қызметі',12,1,0,'P',''],
+  ['Мәжіліс залы',36,1,0,'P',''],
+  ['Персонал демалыс бөлмесі',12,1,12,'KZ',''],
+  ['Серверлік / IT',6,1,0,'P',''] ]}
+];
+
+const INFO = {
+ reception:{p:'Ересек пациенттің бірінші нүктесі: белгілер бойынша сұрыптау, жұқпалы күдіктіні бөлек ағынға бұру, электронды кезек.',
+  r:['Сүзгі кіреберіске жақын; изолятор-бокстың сыртқа жеке шығуы болады','КИЗ сүзгі жанында — жұқпалы пациент ғимаратты аралап өтпейді','Регистратура, гардероб, күту орны — орталық холлда'],
+  k:['Қағаз мұрағатқа үлкен аудан бөлу — МИС (электронды карта) жағдайында артық шығын, 9 м² жеткілікті','Call-орталық болмаса кезек холлда жиналады — бұл холлдың ауданын үлкейтуге мәжбүрлейді']},
+ lab:{p:'Биоматериал алу және талдау: клиникалық, биохимиялық, болашақта ИФА (гепатит, гормондар, D дәрумені).',
+  r:['Қан алу кабинеті холлға жақын — ең көп ағын','Таза аймақ (талдау) мен лас аймақ (жуу-залалсыздандыру) бөлінеді','Бір жұмыс орнына ~6 м², зертхана бөлмесі ≥12 м² (РФ бағдары)'],
+  k:['ИФА бөлмесі лицензия кеңейтілмейінше жұмыс істемейді — ғимаратпен қатар лицензия құжаттарын дайындау','Сирек талдауларды аутсорсингке беру мен өз зертхана экономикасын салыстыру керек']},
+ radio:{p:'Рентген, флюорография, маммография, УДЗ, ЭКГ және функционалдық зерттеулер.',
+  r:['Рентген бөлмелері 1-қабатта, балалар мен жүкті әйелдер бөлмелерімен көршілес емес','Қабырға, есік, еден және төбе радиациялық қорғанысы жобада есептеледі (радиациялық қауіпсіздік талаптары бөлек)','Рентген процедуралық ≥36 м² бір аппаратқа + басқару бөлмесі (РФ бағдары)'],
+  k:['Маммограф пен флюорографқа бөлек бөлме — қымбат. Бір цифрлық DR аппаратымен біріктіру мүмкіндігін тексеру','Аппарат таңдалмай тұрып бөлме өлшемі бекітілмейді — жеткізушінің монтаж талабын алдын ала алу']},
+ service:{p:'Таза және лас ағындарды бөлетін қызметтік ядро: медқалдықтар, кір, стерилизация, персонал гардеробы.',
+  r:['Медқалдық бөлмесінің сыртқа тікелей шығуы бар, пациент ағынымен қиылыспайды','Стерилизация бір бағытта: лас қабылдау → жуу → стерилизация → стерильді сақтау','Жуу-стерилизация бөлмесі ≥6 м² (3 орынға дейін), ≥8 м² (4+) — ДСМ-96 т.152'],
+  k:['Кір жуу ішкі жасалса — бөлек кір жуу блогы керек; аутсорсинг қарапайымырақ әрі арзанырақ болуы мүмкін']},
+ ems:{p:'Ғимараттағы шұғыл жағдайлар мен өз жедел жәрдем көлігіне арналған база.',
+  r:['Сыртқы жеке кіреберіс, көлік тоқтайтын орын және пандус','Шұғыл кабинет пен бригада бөлмесі бір блокта, ғимарат шетінде'],
+  k:['Жедел жәрдем қызметі мен ПМСП жанындағы шұғыл көмек — лицензия талаптары әртүрлі; бөлме құрамын лицензия түріне сай нақтылау керек']},
+ mother:{p:'Әйелдер консультациясы: жүктілікті бақылау, гинекологиялық қарау, отбасын жоспарлау, жүкті әйелдер мектебі.',
+  r:['Гинеколог кабинеті қарау орнымен, жанында санторап','Рентген бөлмелерінен алыс','Балалар бөлімшелерімен көршілес — «Ана мен бала» тұтас блок'],
+  k:['Денсаулық басқармасы ашылу бұйрығын сұрайды — жобадағы бөлімше атауы ресми құрылыммен сәйкес болсын']},
+ crrv:{p:'Баланың дамуы және ерте араласу орталығы: логопед, психолог, арнайы педагог, сенсорлық бөлме, моторика залы.',
+  r:['Стандарт талап ететін 5 бөлме бір аймақта','Тыныш аймақ: шулы холл мен рентгеннен алыс','Балалар ағынымен ортақ, ересектер ағынымен қиылыспайды'],
+  k:['Логопед пен дефектолог тапшы мамандар — бөлме дайын, маман жоқ болуы мүмкін']},
+ peds:{p:'Балаларды қабылдау: жеке кіреберіс, сүзгі, боксы бар педиатриялық блок, сау бала және егу кабинеттері.',
+  r:['Балалар кіреберісі ересектер ағынынан бөлек','Сүзгі + сыртқа жеке шығатын бокс (≥15 м², РФ бағдары)','Сау бала мен егу кабинеті ауру балалар ағынынан алыс'],
+  k:['Педиатр саны — басты шектеу; кабинет саны маман санынан аспасын']},
+ pmsp:{p:'Негізгі ағын: тіркелген халыққа жалпы практика учаскелері, дәрігерге дейінгі қабылдау, скрининг, ауруларды басқару бағдарламасы.',
+  r:['Бір учаскеге бір ЖПД кабинеті (2 ауысымда бір кабинетті 2 учаске бөліп пайдалана алады)','Емшара мен егу кабинеті учаскелер ортасында','Дәліз бойында күту орындары: дәліз ені ≥3,2 м ұсынылады'],
+  k:['Халық өссе — кабинет қоры жетпеуі мүмкін; резерв аудан немесе кеңейту осі қалдыру','Учаске кабинетін «бекітілген дәрігерге» байлау — кабинеттің жартысы бос тұруына әкеледі. Ортақ кесте тиімдірек']},
+ spec:{p:'Консультациялық-диагностикалық көмек: хирург, невролог, кардиолог, эндокринолог, ЛОР, офтальмолог, уролог.',
+  r:['Хирургқа таңу бөлмесі қатар','Офтальмолог кабинетінің ұзындығы ≥5 м (көру өткірлігін тексеру)','Аз жүктемелі мамандар бір кабинетті кесте бойынша бөліседі'],
+  k:['Әр мамандыққа жеке кабинет — бос тұратын аудан. Апталық жүктеме < 20 сағат болса, ортақ кабинет ұсынылады']},
+ dental:{p:'Ересек және балалар стоматологиясы, стерилизация, дентальды рентген.',
+  r:['Негізгі кресло ≥14 м², қосымша ≥7 м² (әмбебап қондырғымен 10 м²) — ДСМ-96 т.136','Стерилизация бөлмесі стоматология блогының ішінде','Компрессор шуы — бөлек бөлме'],
+  k:['Балалар стоматологы 2-қабатта — балалар лифт арқылы келеді; 1-қабатқа ауыстыру нұсқасын қарау','Педиатриялық тарифтік кодтар бойынша бұрынғы мониторинг — балалар қабылдауын бөлек кабинетте тіркеу есепті жеңілдетеді']},
+ service2:{p:'2-қабаттың қызметтік бөлмелері: жинау құралдары, кір, персонал санторабы.',
+  r:['Әр қабатта жинау құралдары бөлмесі болады'], k:[]},
+ dayhosp:{p:'Емхана жанындағы күндізгі стационар (тәулік бойы емес).',
+  r:['Палата: ересекке 6 м², балаға 4,5 м² бір төсекке — ДСМ-96 т.101','Күту аймағы, дәрігер және емшара кабинеті — әрқайсысы ≥10 м² (ДСМ-96 т.101)','Мейірбике посты палаталарды көріп тұратындай'],
+  k:['Төсек саны бекітілген төсек қорымен және СЭС растаған сыйымдылықпен сәйкес болуы керек — бұрынғы айырмашылық қайталанбасын']},
+ rehab:{p:'Физиоем, массаж, ЕДШ залы, ингаляция — шипажаймен байланыстыратын оңалту блогы.',
+  r:['Физиоемде бір стационарлық аппаратқа ≥6 м² — ДСМ-96 т.139','ЕДШ залы ~5 м² бір орынға (РФ бағдары)','Қозғалысы шектеулі пациенттерге лифт міндетті'],
+  k:['Шипажайда бар процедураларды қайталамау: емханада МӘМС тарифтелген минимум, қалғаны шипажайға жолдама арқылы']},
+ admin:{p:'Басқару, қаржы, кадр, сапа қызметі, мәжіліс залы.',
+  r:['Пациент ағынынан бөлек, қанат шетінде','Персонал демалыс бөлмесі ≥12 м² — ДСМ-96 т.237'],
+  k:['Әкімшілікке артық аудан бөлмеу: қашықтан істей алатын функцияларға (бухгалтерия, IT) кабинетті қысқарту']}
+};
+const HUB_INFO = {p:'Орталық холл — ғимараттың «жүрегі»: негізгі кіреберіс, тамбур, регистратура, гардероб, күту, носилкалық лифт пен негізгі баспалдақ. Екі қанатты байланыстырады, ағындарды бөледі.',
+  r:['Регистратура кіреберістен көрінеді, call-орталықпен бір жүйеде','Носилкалық лифт (кабина ≥ 2,1 × 1,1 м ұсынылады) — МГН және оңалту пациенттері үшін','Пандус және МГН кіреберісі негізгі кіреберісте'],
+  k:['Холл тым кіші болса, кезек дәлізге жайылады; тым үлкен болса — қымбат бос аудан. Электронды кезек пен онлайн жазылу холл ауданын азайтады']};
+
+function mkDept(d){
+  return {id:d.id, name:d.name, short:d.short, color:d.color, floor:d.floor, wing:d.wing, order:d.order, kids:!!d.kids, on:true,
+    rooms:d.rooms.map(r=>({id:rid(), name:r[0], area:r[1], count:r[2], min:r[3], src:r[4], tags:r[5]?r[5].split(','):[]}))};
+}
+function defaultState(){
+  return {v:1, name:'Аян емханасының жаңа ғимараты',
+    p:{pop:14000, norm:2000, visits:6, days:260, shifts:2, autoUch:true},
+    b:{shape:'L', depth:6, corr:3.2, floorH:3.6, price:450000},
+    depts:DEPTS0.map(mkDept)};
+}
+
+/* ---------- state ---------- */
+const LS_KEY = 'ayan-builder-v1';
+let S = null;
+try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const o = JSON.parse(raw); if(o && o.v===1 && Array.isArray(o.depts)) S = o; } }catch(e){}
+if(!S) S = defaultState();
+const ui = {tab:'cap', view:'3d', floor:'all', explode:true, shell:false, flows:true, sel:null, room:null, open:{}, planZoom:0};
+let saveTimer=null;
+function persist(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }, 300); }
+
+/* ---------- derived ---------- */
+function capacity(){
+  const p=S.p; const uch=Math.max(1,Math.ceil(p.pop/Math.max(1,p.norm)));
+  const year=p.pop*p.visits; const day=year/Math.max(1,p.days); const shift=day/Math.max(1,p.shifts);
+  return {uch, year, day, shift, peak:shift*1.25, seats:Math.ceil(shift*1.25*0.2)};
+}
+function syncAuto(){
+  if(!S.p.autoUch) return;
+  const {uch}=capacity();
+  S.depts.forEach(d=>d.rooms.forEach(r=>{ if(r.tags.includes('auto-uch')) r.count=uch; }));
+}
+function defH(){ return Math.round((S.b.floorH-0.3)*10)/10; }
+function rH(r){ return +r.h>0?+r.h:defH(); }
+function findRoom(rid){ for(const d of S.depts){ const i=d.rooms.findIndex(r=>r.id===rid); if(i>=0) return {d,r:d.rooms[i],i}; } return null; }
+function parseKey(k){ const p=String(k).split('.'); return {dept:p[0],rid:p[1],k:+p[2]||0}; }
+function expand(d){
+  const out=[];
+  d.rooms.forEach(r=>{ const n=Math.max(0,Math.round(r.count||0)); for(let k=0;k<n;k++) out.push({key:d.id+'.'+r.id+'.'+k, rid:r.id, name:r.name+(n>1?' '+(k+1):''), base:r.name, area:Math.max(1,+r.area||0), min:r.min||0, src:r.src, tags:r.tags, side:r.side||'auto', h:rH(r), purpose:r.purpose||''}); });
+  return out;
+}
+
+/* ---------- layout ---------- */
+let LAY=null;
+function computeLayout(){
+  const D=S.b.depth, C=S.b.corr, W=2*D+C, isL=S.b.shape==='L';
+  const Hw=isL?W:12, ST=3.2;
+  const placed={}, zones={};
+  [1,2].forEach(f=>[1,2].forEach(w=>{
+    const ds=S.depts.filter(d=>d.on&&d.floor===f&&d.wing===w).sort((a,b)=>a.order-b.order);
+    let uA=0,uB=0; const items=[];
+    ds.forEach(d=>{
+      const rs=expand(d); if(!rs.length) return;
+      const start=uA;
+      rs.forEach(r=>{
+        const wd=Math.max(r.area/D,1.5);
+        const pin=r.side==='A'||r.side==='B'?r.side:null;
+        if(pin==='A'||(!pin&&uA<=uB+1e-6)){ items.push({side:'A',u:uA,w:wd,room:r,dept:d}); uA+=wd; }
+        else { items.push({side:'B',u:uB,w:wd,room:r,dept:d}); uB+=wd; }
+      });
+      const diff=Math.abs(uA-uB);
+      if(diff>0.01){
+        const side=uA<uB?'A':'B', u=side==='A'?uA:uB;
+        if(diff>=1.5) items.push({side,u,w:diff,reserve:true,dept:d});
+        else { const last=[...items].reverse().find(it=>it.side===side&&it.dept===d&&!it.reserve); if(last) last.w+=diff; else items.push({side,u,w:diff,reserve:true,dept:d}); }
+        uA=uB=Math.max(uA,uB);
+      }
+      zones[d.id]={floor:f,wing:w,u0:start,u1:uA};
+    });
+    placed[f+'-'+w]={items,len:uA};
+  }));
+  const LW={1:Math.max(placed['1-1'].len,placed['2-1'].len), 2:Math.max(placed['1-2'].len,placed['2-2'].len)};
+  [1,2].forEach(f=>[1,2].forEach(w=>{
+    const P=placed[f+'-'+w]; const gap=LW[w]-P.len;
+    if(gap>0.05){ P.items.push({side:'A',u:P.len,w:gap,reserve:true,tail:true}); P.items.push({side:'B',u:P.len,w:gap,reserve:true,tail:true}); }
+  }));
+  const X0=LW[1]>0?LW[1]+ST:0;
+  function rect(w,side,u,wd){
+    let x0,x1,z0,z1;
+    const zr = side==='A'?[0,D]:side==='B'?[D+C,W]:side==='C'?[D,D+C]:[0,W];
+    if(w===1){ x1=X0-u; x0=x1-wd; [z0,z1]=zr; }
+    else if(!isL){ x0=X0+Hw+u; x1=x0+wd; [z0,z1]=zr; }
+    else { z0=W+u; z1=z0+wd; const xr = side==='A'?[X0+D+C,X0+W]:side==='B'?[X0,X0+D]:side==='C'?[X0+D,X0+D+C]:[X0,X0+W]; [x0,x1]=xr; }
+    return {x0,x1,z0,z1};
+  }
+  function corrPt(w,u){
+    if(w===1) return [X0-u, D+C/2];
+    if(!isL) return [X0+Hw+u, D+C/2];
+    return [X0+D+C/2, W+u];
+  }
+  const HUBN = isL?[X0+D+C/2, D+C/2]:[X0+Hw/2, D+C/2];
+  function facade(it){
+    const r=it.r; const wing=it.wing;
+    if(wing===2&&isL){ return it.side==='A'?{p:[r.x1,(r.z0+r.z1)/2],n:[1,0]}:{p:[r.x0,(r.z0+r.z1)/2],n:[-1,0]}; }
+    return it.side==='A'?{p:[(r.x0+r.x1)/2,r.z0],n:[0,-1]}:{p:[(r.x0+r.x1)/2,r.z1],n:[0,1]};
+  }
+  const floors={1:[],2:[]};
+  [1,2].forEach(f=>{
+    const out=floors[f];
+    [1,2].forEach(w=>{
+      if(LW[w]<=0) return;
+      placed[f+'-'+w].items.forEach(it=>{
+        const r=rect(w,it.side,it.u,it.w);
+        const o={kind:it.reserve?'reserve':'room', floor:f, wing:w, side:it.side, u:it.u, w:it.w, r, area:it.w*D, dept:it.dept?it.dept.id:null, room:it.room||null, tail:!!it.tail};
+        if(o.kind==='room'){ o.key=it.room.key; o.fac=facade({r,wing:w,side:it.side}); }
+        out.push(o);
+      });
+      out.push({kind:'corr', floor:f, wing:w, r:rect(w,'C',0,LW[w])});
+      out.push({kind:'stair', floor:f, wing:w, r:rect(w,'S',LW[w],ST)});
+    });
+    out.push({kind:'hub', floor:f, r:{x0:X0,x1:X0+Hw,z0:0,z1:W}});
+  });
+  const pieces=[];
+  if(LW[1]>0) pieces.push({x0:0,x1:X0,z0:0,z1:W});
+  pieces.push({x0:X0,x1:X0+Hw,z0:0,z1:W});
+  if(LW[2]>0) pieces.push(isL?{x0:X0,x1:X0+W,z0:W,z1:W+LW[2]+ST}:{x0:X0+Hw,x1:X0+Hw+LW[2]+ST,z0:0,z1:W});
+  const bbox={x0:0,z0:0,x1:Math.max(...pieces.map(p=>p.x1)),z1:Math.max(...pieces.map(p=>p.z1))};
+  const footprint=pieces.reduce((s,p)=>s+(p.x1-p.x0)*(p.z1-p.z0),0);
+  return {D,C,W,isL,Hw,ST,X0,LW,floors,zones,pieces,bbox,footprint,corrPt,HUBN,mainEntry:{p:[X0+Hw/2,0],n:[0,-1]}};
+}
+
+/* ---------- metrics & checks ---------- */
+let M=null;
+function metrics(){
+  const L=LAY; let rooms=0, roomsArea=0, reserve=0; const byDept={};
+  [1,2].forEach(f=>L.floors[f].forEach(o=>{
+    if(o.kind==='room'){ rooms++; roomsArea+=o.area; byDept[o.dept]=(byDept[o.dept]||0)+o.area; }
+    if(o.kind==='reserve'){ reserve+=o.area; }
+  }));
+  const gross=L.footprint*2; const volume=L.footprint*S.b.floorH*2;
+  const cap=capacity();
+  let dims;
+  if(L.isL){ const a=L.X0+L.W, b=L.W+(L.LW[2]>0?L.LW[2]+L.ST:0); dims=fmt(a,0)+' × '+fmt(b,0)+' м (Г)'; }
+  else dims=fmt(L.bbox.x1,0)+' × '+fmt(L.W,1)+' м';
+  return {rooms, roomsArea, reserve, gross, volume, comm:gross-roomsArea-reserve, cost:gross*S.b.price, cap, dims, byDept};
+}
+function allRooms(){ const a=[]; [1,2].forEach(f=>LAY.floors[f].forEach(o=>{ if(o.kind==='room') a.push(o); })); return a; }
+function deptById(id){ return S.depts.find(d=>d.id===id); }
+function checks(){
+  const out=[]; const rooms=allRooms(); const cap=M.cap;
+  const has=t=>rooms.filter(o=>o.room.tags.includes(t));
+  const xr=has('xray').filter(o=>o.dept!=='dental');
+  if(xr.length){ const up=xr.filter(o=>o.floor!==1); out.push(up.length?{s:'warn',t:'Рентген бөлмелері 2-қабатта',d:'Ауыр аппарат пен радиациялық қорғаныс 1-қабатта қарапайым әрі арзан. «Сәулелік диагностиканы» 1-қабатқа ауыстырыңыз.'}:{s:'ok',t:'Рентген 1-қабатта',d:'Жабдық салмағы мен радиациялық қорғаныс тұрғысынан дұрыс орналасу.'}); }
+  const radio=S.depts.filter(d=>d.on&&d.rooms.some(r=>r.tags.includes('xray'))&&d.id!=='dental');
+  const kidsD=S.depts.filter(d=>d.on&&d.kids);
+  const clash=radio.some(r=>kidsD.some(k=>k.floor===r.floor&&k.wing===r.wing));
+  out.push(clash?{s:'warn',t:'Рентген балалар/жүкті әйелдер аймағымен бір қанатта',d:'Рентгенді басқа қанатқа көшіріңіз немесе арасына қызметтік бөлмелер қойыңыз.'}:{s:'ok',t:'Рентген балалар аймағынан бөлек',d:'Сәулелік диагностика «Ана мен бала» қанатынан бөлек орналасқан.'});
+  const ke=has('entrance-kids');
+  out.push(ke.length&&ke.every(o=>o.floor===1)?{s:'ok',t:'Балалардың жеке кіреберісі бар',d:'Балалар сүзгісі ересектер ағынынан бөлек кіреберіспен.'}:{s:'bad',t:'Балалардың жеке кіреберісі жоқ',d:'Педиатрияға «Балалар кіреберісі және сүзгі» бөлмесін 1-қабатта қосыңыз.'});
+  const boxes=has('exit-box').filter(o=>deptById(o.dept)?.kids);
+  out.push(boxes.length?{s:'ok',t:'Балалар боксы: '+boxes.length,d:'Сыртқа жеке шығуы бар бокс — жұқпалы күдікті баланы оқшаулау үшін.'}:{s:'bad',t:'Балалар боксы жоқ',d:'Сүзгі жанында сыртқа жеке шығатын кемінде бір бокс қажет.'});
+  const kUp=kidsD.filter(d=>d.floor!==1);
+  if(kUp.length) out.push({s:'warn',t:'Балалар бөлімшесі 2-қабатта: '+kUp.map(d=>d.short).join(', '),d:'Арбамен келетін аналар үшін 1-қабат ыңғайлы әрі қауіпсіз.'});
+  const vop=rooms.filter(o=>o.room.tags.includes('auto-uch')).length;
+  if(vop>=cap.uch) out.push({s:'ok',t:'ЖПД кабинеттері: '+vop+' / учаске: '+cap.uch,d:'Әр учаскеге жеке кабинет.'});
+  else if(S.p.shifts>=2&&vop>=Math.ceil(cap.uch/2)) out.push({s:'warn',t:'ЖПД кабинеттері: '+vop+' / учаске: '+cap.uch,d:'2 ауысымда кабинетті бөлісу арқылы жетеді, бірақ үй шақыруы мен қабылдау кестесін қатаң жоспарлау керек.'});
+  else out.push({s:'bad',t:'ЖПД кабинеттері жетпейді: '+vop+' / '+cap.uch,d:'Учаске санына сай кабинет қосыңыз немесе «Қуат» бөлімінде автобайланысты қосыңыз.'});
+  const beds=rooms.filter(o=>o.room.tags.some(t=>t.startsWith('beds:')));
+  if(beds.length){
+    const bad=beds.filter(o=>{ const n=+o.room.tags.find(t=>t.startsWith('beds:')).split(':')[1]; return o.room.area/n<6-1e-6; });
+    const nb=beds.reduce((s,o)=>s+(+o.room.tags.find(t=>t.startsWith('beds:')).split(':')[1]),0);
+    out.push(bad.length?{s:'bad',t:'Палата ауданы нормадан аз',d:bad.map(o=>o.room.name).join(', ')+' — ересекке 6 м²/төсек (ДСМ-96 т.101).'}:{s:'ok',t:'Күндізгі стационар: '+nb+' төсек, палаталар нормада',d:'6 м²/төсек ересекке (ДСМ-96 т.101). 2 ауысыммен күніне ~'+(nb*2)+' пациент.'});
+  }
+  const under=rooms.filter(o=>o.room.min&&o.room.area<o.room.min-1e-6);
+  const uniq=[...new Set(under.map(o=>o.room.base))];
+  out.push(uniq.length?{s:'bad',t:'Нормадан кіші бөлмелер: '+uniq.length,d:uniq.slice(0,6).join('; ')+(uniq.length>6?'…':'')}:{s:'ok',t:'Барлық бөлме минималды аудан нормасынан кем емес',d:'Нормасы белгілі бөлмелер тексерілді (ҚР ДСМ-96 және РФ бағдары).'});
+  const low=[...new Set(rooms.filter(o=>o.room.h<3-1e-6).map(o=>o.room.base))];
+  const high=[...new Set(rooms.filter(o=>o.room.h>S.b.floorH-0.2+1e-6).map(o=>o.room.base))];
+  if(high.length) out.push({s:'bad',t:'Бөлме биіктігі қабат биіктігінен асады: '+high.length,d:high.slice(0,5).join('; ')+' — қабат биіктігі '+fmt(S.b.floorH,1)+' м.'});
+  if(low.length) out.push({s:'warn',t:'Биіктігі 3,0 м-ден төмен бөлмелер: '+low.length,d:low.slice(0,5).join('; ')+' — медициналық кабинеттер үшін ≥3,0 м ұсынылады (бағдар, жобалаушымен нақтылау).'});
+  const waste=has('exit-waste');
+  out.push(waste.length&&waste.some(o=>o.floor===1)?{s:'ok',t:'Медқалдық бөлмесі сыртқа шығуымен',d:'Лас ағын пациент кіреберістерімен қиылыспайды.'}:{s:'bad',t:'Медқалдық бөлмесі 1-қабатта жоқ',d:'Сыртқа тікелей шығатын уақытша сақтау бөлмесі қажет.'});
+  const stairs=1+(LAY.LW[1]>0?1:0)+(LAY.LW[2]>0?1:0);
+  const far=Math.max(LAY.LW[1],LAY.LW[2])/2;
+  out.push({s:stairs>=2?'ok':'bad',t:'Баспалдақ саны: '+stairs+' · лифт: 1 (носилкалық)',d:'Ең алыс бөлмеден жақын баспалдаққа дейін ~'+fmt(far,0)+' м дәліз бойымен. Шекті мәнді жобалаушы өрт қауіпсіздігі нормасы бойынша тексереді.'});
+  if(S.depts.some(d=>d.on&&d.id==='dental'&&d.floor===2&&d.rooms.some(r=>/Балалар/.test(r.name)&&r.count>0)))
+    out.push({s:'info',t:'Балалар стоматологы 2-қабатта',d:'Балалар лифт арқылы көтеріледі. Балама: балалар креслосын 1-қабатқа, педиатрия қанатына көшіру.'});
+  const rp=M.reserve/(M.gross||1);
+  out.push({s:rp>0.12?'warn':'info',t:'Резерв (бос) аудан: '+fmt(M.reserve,0)+' м² ('+fmt(rp*100,0)+'%)',d:rp>0.12?'Қабаттар теңгерілмеген. Бөлімшелерді қанаттар арасында ауыстырып, ғимаратты қысқартыңыз.':'Болашақ кеңею (жаңа учаске, мамандар) үшін қор.'});
+  return out;
+}
+
+/* ---------- rendering: KPI ---------- */
+function renderKPI(){
+  const c=M.cap;
+  $('#kpis').innerHTML=[
+    ['Ғимарат ауданы','',fmt(M.gross,0)+' м²','2 қабат · көлемі ≈ '+fmt(M.volume,0)+' м³'],
+    ['Пайдалы аудан','',fmt(M.roomsArea,0)+' м²',fmt(M.roomsArea/M.gross*100,0)+'% · дәліз/холл '+fmt(M.comm,0)+' м²'],
+    ['Бөлмелер','',fmt(M.rooms),S.depts.filter(d=>d.on).length+' бөлімше'],
+    ['Қуат','<span class="tag p">болжам</span>','~'+fmt(c.shift,0)+' бару','ауысымына · '+c.uch+' учаске'],
+    ['Габарит','',M.dims,'бөлме тереңдігі '+fmt(S.b.depth,1)+' м'],
+    ['Құрылыс құны','<span class="tag p">болжам</span>','≈ '+fmt(M.cost/1e9,2)+' млрд ₸',fmt(S.b.price)+' ₸/м², жабдықсыз']
+  ].map(k=>`<div class="kpi"><div class="l">${k[0]} ${k[1]}</div><div class="v">${k[2]}</div><div class="s">${k[3]}</div></div>`).join('');
+  $('#projName').textContent=S.name;
+  $('#subline').textContent='Сарыағаш · 2 қабат · '+fmt(S.p.pop)+' тіркелген тұрғын · '+c.uch+' учаске · '+(S.b.shape==='L'?'Г-тәрізді':'сызықтық')+' көлем';
+}
+
+/* ---------- sidebar ---------- */
+function renderSide(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected', b.dataset.tab===ui.tab?'true':'false'));
+  const el=$('#sideBody');
+  if(ui.tab==='cap') el.innerHTML=capHTML();
+  else if(ui.tab==='depts') el.innerHTML=deptsHTML();
+  else if(ui.tab==='bld') el.innerHTML=bldHTML();
+  else el.innerHTML=varsHTML();
+  if(ui.tab==='vars') renderVarList();
+}
+function capCalcHTML(){
+  const c=capacity();
+  return `<div class="calc" id="capCalc">
+    <div><span>Учаске саны</span><b>${c.uch}</b></div>
+    <div><span>Жылына бару</span><b>${fmt(c.year)}</b></div>
+    <div><span>Күніне бару</span><b>${fmt(c.day,0)}</b></div>
+    <div class="hl"><span>Ауысымға бару (жобалық қуат)</span><b>${fmt(c.shift,0)}</b></div>
+    <div><span>Шың жүктеме (×1,25)</span><b>${fmt(c.peak,0)}</b></div>
+    <div><span>Күту орны (шыңның ~20%)</span><b>${fmt(c.seats)}</b></div>
+  </div>`;
+}
+function capHTML(){
+  const p=S.p;
+  return `<p class="sec-title">Тіркелген халық → қуат</p>
+  <div class="field"><label for="pPop">Тіркелген тұрғын саны <span class="tag kz">факт</span></label><input type="number" id="pPop" data-p="pop" min="1000" step="100" value="${p.pop}"></div>
+  <div class="row2">
+    <div class="field"><label for="pNorm">Учаске нормасы</label><input type="number" id="pNorm" data-p="norm" min="500" step="50" value="${p.norm}"></div>
+    <div class="field"><label for="pVis">Бару / адам / жыл <span class="tag p">болжам</span></label><input type="number" id="pVis" data-p="visits" min="1" step="0.5" value="${p.visits}"></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label for="pDays">Жұмыс күні / жыл</label><input type="number" id="pDays" data-p="days" min="200" max="365" value="${p.days}"></div>
+    <div class="field"><label for="pSh">Ауысым</label><select id="pSh" data-p="shifts"><option value="1"${p.shifts==1?' selected':''}>1</option><option value="2"${p.shifts==2?' selected':''}>2</option></select></div>
+  </div>
+  <label class="chk"><input type="checkbox" id="pAuto" data-p="autoUch"${p.autoUch?' checked':''}> ЖПД кабинет санын учаске санымен байланыстыру</label>
+  ${capCalcHTML()}
+  <p class="note">Ауысымға бару = халық × жылына бару ÷ жұмыс күні ÷ ауысым. «Бару/адам/жыл» — менің болжамым (МӘМС/ТМККК статистикаңызбен ауыстырыңыз: өткен жылғы бару санын тіркелген халыққа бөліңіз).</p>
+  <p class="note">2 ауысымда бір ЖПД кабинетін екі учаске бөлсе, кабинет саны екі есе азаяды — бірақ үйге шақыру мен қабылдау кестесін қатаң бекіту керек.</p>`;
+}
+function deptsHTML(){
+  const groups=[[1,1],[1,2],[2,1],[2,2]];
+  return `<p class="note">Бөлімшені басыңыз — бөлмелері ашылады. Қабат/қанат ауыстыру, ретін өзгерту (↑↓ — холлға жақын/алыс), бөлме қосу. Модель бірден қайта құрылады.</p>`+
+  groups.map(([f,w])=>{
+    const ds=S.depts.filter(d=>d.floor===f&&d.wing===w).sort((a,b)=>a.order-b.order);
+    return `<div class="dgroup"><h3>${f}-қабат · ${WING[w]} <span style="text-transform:none;letter-spacing:0">(холлдан шетке)</span></h3>${ds.map(deptHTML).join('')||'<p class="note">Бос</p>'}</div>`;
+  }).join('')+
+  `<div class="dgroup"><h3>Жаңа бөлімше</h3><div class="row2"><input style="min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:7px 9px" type="text" id="newDept" placeholder="Атауы, мыс.: Дәріхана"><button class="btn" data-act="addDept">Қосу</button></div></div>`;
+}
+function deptHTML(d){
+  const sum=d.rooms.reduce((s,r)=>s+(+r.area||0)*(+r.count||0),0);
+  const open=ui.open[d.id];
+  return `<div class="dept${ui.sel===d.id?' sel':''}${d.on?'':' off'}" data-id="${d.id}">
+   <div class="dept-head">
+     <input type="checkbox" data-act="on" aria-label="Қосу/өшіру"${d.on?' checked':''}>
+     <span class="sw" style="--c:${d.color}"></span>
+     <button class="dept-name" data-act="open" title="${esc(d.name)}">${esc(d.name)}</button>
+     <span class="dept-sum" data-sum="${d.id}">${fmt(sum)} м²</span>
+   </div>
+   <div class="dept-ctl">
+     <select data-act="floor" aria-label="Қабат"><option value="1"${d.floor===1?' selected':''}>1-қабат</option><option value="2"${d.floor===2?' selected':''}>2-қабат</option></select>
+     <select data-act="wing" aria-label="Қанат"><option value="1"${d.wing===1?' selected':''}>А қанаты</option><option value="2"${d.wing===2?' selected':''}>Б қанаты</option></select>
+     <button class="btn small" data-act="up" aria-label="Холлға жақындату">↑</button>
+     <button class="btn small" data-act="down" aria-label="Холлдан алыстату">↓</button>
+   </div>
+   ${open?`<div class="rooms">
+     <div class="rooms-head"><span>Бөлме</span><span>Саны</span><span></span><span>м²</span><span></span></div>
+     ${d.rooms.map(r=>`<div class="room-row${r.min&&r.area<r.min?' under':''}" data-rid="${r.id}">
+        <input type="text" data-f="name" value="${esc(r.name)}" aria-label="Бөлме атауы">
+        <input type="number" data-f="count" min="0" max="40" value="${r.count}" aria-label="Саны"${r.tags.includes('auto-uch')&&S.p.autoUch?' disabled title="Учаске санымен байланысқан"':''}>
+        <span class="x">×</span>
+        <input type="number" data-f="area" min="1" step="0.5" value="${r.area}" aria-label="Аудан" title="${r.min?'Норма min '+r.min+' м²':''}">
+        <button class="del" data-act="delRoom" aria-label="Жою">×</button></div>`).join('')}
+     <button class="btn small" data-act="addRoom">+ Бөлме қосу</button>
+   </div>`:''}
+  </div>`;
+}
+function bldHTML(){
+  const b=S.b;
+  return `<div class="field"><label for="bName">Жоба атауы</label><input type="text" id="bName" data-b="name" value="${esc(S.name)}"></div>
+  <div class="field"><label>Көлем пішіні</label>
+    <div class="seg" id="segShape"><button data-shape="L" aria-pressed="${b.shape==='L'}">Г-тәрізді</button><button data-shape="line" aria-pressed="${b.shape==='line'}">Сызықтық</button></div></div>
+  <p class="note">Г-тәрізді: орталық холл бұрышта, екі қанат — ересектер (А) және ана мен бала (Б). Учаскеде орын тар болса — сызықтық.</p>
+  <div class="row2">
+    <div class="field"><label for="bDepth">Бөлме тереңдігі, м</label><input type="number" id="bDepth" data-b="depth" min="4.8" max="7.2" step="0.3" value="${b.depth}"></div>
+    <div class="field"><label for="bCorr">Дәліз ені, м</label><input type="number" id="bCorr" data-b="corr" min="2.4" max="4.2" step="0.1" value="${b.corr}"></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label for="bH">Қабат биіктігі, м</label><input type="number" id="bH" data-b="floorH" min="3" max="4.5" step="0.1" value="${b.floorH}"></div>
+    <div class="field"><label for="bPrice">₸ / м² <span class="tag p">болжам</span></label><input type="number" id="bPrice" data-b="price" min="100000" step="10000" value="${b.price}"></div>
+  </div>
+  <p class="note">Дәліз бойында күту орындары болса, ені ≥3,2 м ұсынылады (бағдар). Бөлме тереңдігі 6 м — 12 м² кабинет 2×6 м емес, шамамен 3×4 м болып жобаланады; модельде аудан тереңдікке бөлініп көрсетіледі.</p>
+  <p class="note">1 м² құны — менің шартты болжамым. Нақты сметалық құнды жобалаушыдан немесе Түркістан облысындағы соңғы мемлекеттік сатып алу сметаларынан алыңыз.</p>`;
+}
+function varsHTML(){
+  return `<p class="sec-title">Нұсқаларды сақтау</p>
+  <p class="note" id="varNote">Әр өзгеріс осы браузерде автоматты сақталады. Нұсқаларды салыстыру үшін атау беріп сақтаңыз.</p>
+  <div class="row2"><input type="text" id="varName" style="border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:7px 9px;min-width:0" placeholder="мыс.: Г-нұсқа, 7 учаске"><button class="btn primary" data-act="saveVar">Сақтау</button></div>
+  <div class="variants" id="varList"></div>
+  <p class="sec-title">Экспорт</p>
+  <div class="row2"><button class="btn" data-act="csv">Бөлмелер · CSV</button><button class="btn" data-act="json">Жоба · JSON</button></div>
+  <p class="note" id="dlNote"></p>
+  <p class="sec-title">Бастапқы күй</p>
+  <div class="confirm" id="resetBox"><button class="btn" data-act="reset">Бастапқы бағдарламаға қайтару</button></div>`;
+}
+
+/* ---------- variants (db) ---------- */
+let DB=null, DL=null, VARS=[], varUnsub=null;
+const STANDALONE=!(window.claude&&typeof window.claude.use==='function');
+const LV_KEY='ayan-builder-variants';
+function localVars(){ try{ return JSON.parse(localStorage.getItem(LV_KEY)||'[]'); }catch(e){ return []; } }
+function setLocalVars(a){ try{ localStorage.setItem(LV_KEY,JSON.stringify(a)); return true; }catch(e){ return false; } }
+if(STANDALONE) VARS=localVars();
+function renderVarList(){
+  const el=$('#varList'); if(!el) return;
+  if(!DB&&!STANDALONE){ el.innerHTML='<p class="note">Атаулы нұсқалар бұл көріністе сақталмайды.</p>'; return; }
+  el.innerHTML=VARS.length?VARS.map(v=>`<div class="var" data-vid="${esc(v.id)}"><div style="min-width:0"><div class="nm">${esc(v.name)}</div><div class="m">${esc((v.savedAt||'').slice(0,16).replace('T',' '))} · ${fmt(v.gross||0)} м² · ${v.rooms||0} бөлме</div></div><button class="btn small" data-act="loadVar">Ашу</button><button class="btn small" data-act="delVar" aria-label="Жою">×</button></div>`).join(''):'<p class="note">Әзірге сақталған нұсқа жоқ.</p>';
+  const dn=$('#dlNote'); if(dn) dn.textContent=(DL||STANDALONE)?'':'Файл жүктеу бұл көріністе қолжетімсіз.';
+}
+async function initCaps(){
+  if(STANDALONE){ $('#btnCsv').hidden=false; $('#btnJson').hidden=false; renderVarList(); return; }
+  try{ DB=await window.claude.use('db'); }catch(e){ DB=null; }
+  try{ DL=await window.claude.use('downloads'); }catch(e){ DL=null; }
+  $('#btnCsv').hidden=!DL; $('#btnJson').hidden=!DL;
+  if(DB){
+    try{ varUnsub=DB.collection('variants').orderBy('savedAt','desc').onSnapshot(snap=>{ VARS=snap.docs.map(d=>({id:d.id,...d.data()})); renderVarList(); }, ()=>{}); }catch(e){}
+  }
+  renderVarList();
+}
+async function saveVariant(){
+  const name=($('#varName')?.value||'').trim()||('Нұсқа '+new Date().toLocaleDateString('ru-RU'));
+  if(!DB){ if(!STANDALONE){ toast('Атаулы нұсқа бұл көріністе сақталмайды'); return; }
+    const a=localVars(); a.unshift({id:rid(),name,savedAt:new Date().toISOString(),gross:Math.round(M.gross),rooms:M.rooms,json:JSON.stringify(S)});
+    if(setLocalVars(a)){ VARS=a; renderVarList(); toast('Сақталды (осы браузерде): '+name); if($('#varName')) $('#varName').value=''; } else toast('Браузер жадына сақталмады');
+    return; }
+  try{ await DB.collection('variants').doc().set({name, savedAt:new Date().toISOString(), gross:Math.round(M.gross), rooms:M.rooms, json:JSON.stringify(S)}); toast('Сақталды: '+name); if($('#varName')) $('#varName').value=''; }
+  catch(e){ toast('Сақталмады: '+(e&&e.message||'қате')); }
+}
+function loadVariant(id){
+  const v=VARS.find(x=>x.id===id); if(!v) return;
+  try{ const o=JSON.parse(v.json); if(o&&o.v===1){ S=o; ui.room=null; refresh(true); toast('Ашылды: '+v.name); } }catch(e){ toast('Нұсқа оқылмады'); }
+}
+async function deleteVariant(id){ if(!DB){ if(STANDALONE){ VARS=localVars().filter(v=>v.id!==id); setLocalVars(VARS); renderVarList(); toast('Жойылды'); } return; } try{ await DB.collection('variants').doc(id).delete(); toast('Жойылды'); }catch(e){ toast('Жойылмады'); } }
+
+/* ---------- export ---------- */
+function scheduleRows(){
+  const rows=[];
+  S.depts.filter(d=>d.on).sort((a,b)=>a.floor-b.floor||a.wing-b.wing||a.order-b.order).forEach(d=>{
+    d.rooms.forEach(r=>{ if(r.count>0) rows.push({d,r}); });
+  });
+  return rows;
+}
+async function download(kind){
+  if(!DL&&!STANDALONE){ toast('Файл жүктеу бұл көріністе қолжетімсіз'); return; }
+  let filename, data;
+  if(kind==='csv'){
+    const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+    const lines=[['Қабат','Қанат','Бөлімше','Бөлме','Саны','Аудан 1 бөлме м2','Барлығы м2','Норма min м2','Көзі','Биіктігі м','Көлемі м3','Дәліз жағы','Мақсаты'].map(q).join(';')];
+    scheduleRows().forEach(({d,r})=>lines.push([d.floor,WING[d.wing],d.name,r.name,r.count,String(r.area).replace('.',','),String(r.area*r.count).replace('.',','),r.min||'',SRC[r.src]?SRC[r.src][1]:'',String(rH(r)).replace('.',','),String(Math.round(r.area*rH(r)*r.count)),r.side&&r.side!=='auto'?r.side:'авто',r.purpose||''].map(q).join(';')));
+    lines.push(''); lines.push([q('Ғимарат ауданы (осьтер)'),q(Math.round(M.gross))].join(';'));
+    lines.push([q('Пайдалы аудан'),q(Math.round(M.roomsArea))].join(';'));
+    filename='ayan-bolmeler-tizimi.csv'; data='﻿'+lines.join('\r\n');
+  } else { filename='ayan-gimarat-zhoba.json'; data=JSON.stringify(S,null,2); }
+  if(!DL){ const blob=new Blob([data],{type:kind==='csv'?'text/csv;charset=utf-8':'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); toast('Файл жүктелді: '+filename); return; }
+  try{ const res=await DL.save({filename,data}); if(res&&res.status==='saved') toast('Файл берілді: '+filename); }
+  catch(e){ if(e&&e.code!=='cancelled') toast('Файл берілмеді: '+(e.message||e.code||'')); }
+}
+
+/* ---------- legend, passport, checks, schedule ---------- */
+function renderLegend(){
+  $('#legend').innerHTML=S.depts.filter(d=>d.on).sort((a,b)=>a.floor-b.floor||a.wing-b.wing||a.order-b.order).map(d=>`<button class="lg" data-dept="${d.id}" aria-pressed="${ui.sel===d.id}"><span class="sw" style="--c:${d.color}"></span>${esc(d.short||d.name)}<span class="f">${d.floor}·${d.wing===1?'А':'Б'}</span></button>`).join('')+
+   `<button class="lg" data-dept="hub" aria-pressed="${ui.sel==='hub'}"><span class="sw" style="--c:var(--corr)"></span>Орталық холл</button>`;
+}
+function renderPassport(){
+  const el=$('#pp');
+  if(ui.sel==='hub'){
+    const a=LAY.Hw*LAY.W;
+    el.innerHTML=`<div class="pp-title"><span class="sw" style="--c:var(--corr)"></span><div><h3>Орталық холл</h3><div class="pp-meta">1 және 2-қабат · әр қабатта ${fmt(a,0)} м²</div></div></div>
+     <p>${HUB_INFO.p}</p><div><p class="sec-title">Талаптар</p><ul>${HUB_INFO.r.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+     <div><p class="sec-title">Тәуекел мен балама</p><ul class="risk">${HUB_INFO.k.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+    return;
+  }
+  const d=deptById(ui.sel);
+  if(!d){ renderOverview(el); return; }
+  const info=INFO[d.id]||{p:'Пайдаланушы қосқан бөлімше. Мақсаты мен талаптарын өзіңіз толықтырыңыз.',r:[],k:[]};
+  const n=d.rooms.reduce((s,r)=>s+(+r.count||0),0);
+  const area=M.byDept[d.id]||0;
+  let rc='';
+  if(ui.room){ const o=allRooms().find(x=>x.key===ui.room); if(o&&o.dept===d.id) rc=roomEditorHTML(o,d); }
+  el.innerHTML=`<div class="pp-title"><span class="sw" style="--c:${d.color}"></span><div><h3>${esc(d.name)}</h3><div class="pp-meta">${d.floor}-қабат · ${WING[d.wing]} · ${n} бөлме · ${fmt(area,0)} м²</div></div></div>
+   <p>${info.p}</p>${rc}
+   ${info.r.length?`<div><p class="sec-title">Талаптар</p><ul>${info.r.map(x=>`<li>${x}</li>`).join('')}</ul></div>`:''}
+   ${info.k.length?`<div><p class="sec-title">Тәуекел мен балама</p><ul class="risk">${info.k.map(x=>`<li>${x}</li>`).join('')}</ul></div>`:''}
+   <div><p class="sec-title">Бөлмелер</p><table class="mini">${d.rooms.filter(r=>r.count>0).map(r=>{ const st=SRC[r.src]||SRC.P; const k=d.id+'.'+r.id+'.0'; return `<tr data-key="${k}" class="${ui.room&&ui.room.startsWith(d.id+'.'+r.id+'.')?'sel':''}"><td>${esc(r.name)} <span class="tag ${st[0]}">${st[1]}</span></td><td class="n">${r.count} × ${fmt(r.area,1)}</td></tr>`; }).join('')}</table></div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" data-act="editDept">Бөлмелерді өңдеу</button><button class="btn small" data-act="overview">← Ғимарат құрылымы</button></div>`;
+}
+const TAGTXT={'filter':'Сүзгі','exit-box':'Сыртқа жеке шығу','exit-waste':'Медқалдық шығысы','entrance-kids':'Балалар кіреберісі','entrance-ems':'Жедел жәрдем кіреберісі','entrance-staff':'Персонал кіреберісі','xray':'Радиациялық қорғаныс','waste-src':'Медқалдық көзі','auto-uch':'Учаске санымен байланысты'};
+function roomCalcHTML(o){
+  const f=findRoom(parseKey(o.key).rid); if(!f) return ''; const r=f.r; const h=rH(r);
+  const st=SRC[r.src]||SRC.P;
+  const tagTxt=(r.tags||[]).map(t=>TAGTXT[t]||(t.startsWith('beds:')?t.split(':')[1]+' төсек':'')).filter(Boolean).join(', ');
+  return `<span>Модельдегі өлшемі</span><span>${fmt(o.w,2)} × ${fmt(LAY.D,1)} м = ${fmt(o.area,1)} м²</span>
+    <span>Көлемі</span><span>${fmt(r.area*h,1)} м³${r.count>1?' · барлығы '+fmt(r.area*h*r.count,0)+' м³':''}</span>
+    <span>Норма min</span><span>${r.min?fmt(r.min,1)+' м² <span class="tag '+st[0]+'">'+st[1]+'</span>'+(r.area<r.min?' <b style="color:var(--bad)">аз</b>':''):'белгіленбеген'}</span>
+    <span>Орны</span><span>${o.floor}-қабат · ${WING[o.wing]} · ${o.side} жағы · холлдан ${fmt(o.u,1)} м</span>
+    ${tagTxt?`<span>Ерекшелігі</span><span>${tagTxt}</span>`:''}`;
+}
+function roomEditorHTML(o,d){
+  const f=findRoom(parseKey(o.key).rid); if(!f) return ''; const r=f.r; const side=r.side||'auto';
+  const auto=(r.tags||[]).includes('auto-uch')&&S.p.autoUch;
+  return `<div class="roomcard" id="roomEd" data-rid="${r.id}">
+    <div class="ed-h"><h4>Кабинетті өңдеу</h4><button class="del" data-act="closeRoom" aria-label="Жабу">×</button></div>
+    <div class="field"><label for="reName">Атауы</label><input type="text" id="reName" data-rf="name" value="${esc(r.name)}"></div>
+    <div class="field"><label for="rePurpose">Мақсаты</label><textarea id="rePurpose" data-rf="purpose" rows="3" placeholder="Мыс.: кімге, қандай қызмет, қандай жабдық тұрады">${esc(r.purpose||'')}</textarea></div>
+    <div class="row3">
+      <div class="field"><label for="reCount">Саны</label><input type="number" id="reCount" data-rf="count" min="0" max="40" value="${r.count}"${auto?' disabled title="Учаске санымен байланысқан"':''}></div>
+      <div class="field"><label for="reArea">Ауданы, м²</label><input type="number" id="reArea" data-rf="area" min="1" max="400" step="0.5" value="${r.area}"></div>
+      <div class="field"><label for="reH">Биіктігі, м</label><input type="number" id="reH" data-rf="h" min="2.4" max="6" step="0.1" value="${rH(r)}"></div>
+    </div>
+    <div class="kv" id="reCalc">${roomCalcHTML(o)}</div>
+    <div class="field"><label for="reDept">Бөлімше (орнын ауыстыру)</label><select id="reDept" data-rf="dept">${S.depts.map(x=>`<option value="${x.id}"${x.id===d.id?' selected':''}>${x.floor}·${x.wing===1?'А':'Б'} — ${esc(x.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Дәліздің жағы</label><div class="seg" id="reSide">${[['auto','Авто'],['A','А жағы'],['B','Б жағы']].map(([v,t])=>`<button data-act="rSide" data-v="${v}" aria-pressed="${side===v}">${t}</button>`).join('')}</div></div>
+    <div class="field"><label>Реті бөлімше ішінде <span class="pos">${f.i+1} / ${f.d.rooms.length}</span></label><div class="btnrow"><button class="btn small" data-act="rMove" data-dir="-1">← Холлға жақын</button><button class="btn small" data-act="rMove" data-dir="1">Холлдан алыс →</button></div></div>
+    <p class="note">Жоспарда кабинетті сүйреп, басқа кабинеттің үстіне тастасаңыз — сол орынға (бөлімшесі мен жағына) ауысады.</p>
+    <div class="btnrow"><button class="btn small" data-act="rDup">Көшірмесін жасау</button><button class="btn small danger" data-act="rDel">Жою</button></div>
+  </div>`;
+}
+function moveRoom(rid,toDept,beforeRid,side){
+  const f=findRoom(rid); const td=deptById(toDept); if(!f||!td) return;
+  f.d.rooms.splice(f.i,1);
+  let idx=beforeRid?td.rooms.findIndex(x=>x.id===beforeRid):-1; if(idx<0) idx=td.rooms.length;
+  td.rooms.splice(idx,0,f.r);
+  if(side) f.r.side=side;
+  ui.sel=toDept; ui.room=toDept+'.'+rid+'.0';
+}
+function renderOverview(el){
+  const blocks=[[1,'1-қабат — көп ағынды, балалар және ауыр жабдық','Келушілердің көбі баратын (қан алу, диагностика), арбамен келетін (ана мен бала), сыртқа жеке шығуды қажет ететін (жедел жәрдем, медқалдық, бокс) бөлімшелер.'],
+    [2,'2-қабат — жоспарлы қабылдау, емдеу және басқару','Алдын ала жазылып келетін учаскелер мен мамандар, күндізгі стационар, оңалту және әкімшілік. Байланыс — орталық холлдағы лифт пен баспалдақ.']];
+  el.innerHTML=`<div class="pp-title"><span class="sw" style="--c:var(--fg)"></span><div><h3>Ғимарат құрылымы</h3><div class="pp-meta">${S.depts.filter(x=>x.on).length} бөлімше · ${M.rooms} бөлме · ${fmt(M.roomsArea,0)} м² пайдалы</div></div></div>
+   <p>Зоналау логикасы: орталық холлдан екі қанат тарайды. <b>А қанаты</b> — ересектер ағыны мен диагностика, <b>Б қанаты</b> — «Ана мен бала», балалардың жеке кіреберісімен. Қатты ағынды бөлімшелер холлға жақын, тыныш және қызметтік бөлімшелер шетке қарай.</p>
+   ${blocks.map(([f,t,p])=>`<div><p class="sec-title">${t}</p><p class="note" style="margin:4px 0 6px">${p}</p><table class="mini">${S.depts.filter(x=>x.on&&x.floor===f).sort((a,b)=>a.wing-b.wing||a.order-b.order).map(x=>`<tr data-dept="${x.id}"><td><span class="sw" style="--c:${x.color};display:inline-block;margin-right:6px;vertical-align:-1px"></span>${esc(x.name)}</td><td class="n">${x.wing===1?'А':'Б'} · ${fmt(M.byDept[x.id]||0,0)} м²</td></tr>`).join('')}</table></div>`).join('')}
+   <p class="note">Бөлімшені басыңыз — оның мақсаты, талаптары, тәуекелдері және бөлмелері ашылады.</p>`;
+}
+function renderChecks(){
+  const cs=checks(); const ic={ok:'✓',warn:'!',bad:'✕',info:'i'};
+  $('#checks').innerHTML=cs.map(c=>`<li><span class="st ${c.s}">${ic[c.s]}</span><div><b>${esc(c.t)}</b><p>${esc(c.d)}</p></div></li>`).join('');
+  const nb=cs.filter(c=>c.s==='bad').length, nw=cs.filter(c=>c.s==='warn').length;
+  $('#chkSum').textContent=(nb?nb+' қате · ':'')+(nw?nw+' ескерту':'')||'бәрі дұрыс';
+  if(!nb&&!nw) $('#chkSum').textContent='бәрі дұрыс';
+}
+function renderSchedule(){
+  const rows=scheduleRows(); let html='<thead><tr><th>Қабат</th><th>Қанат</th><th>Бөлме</th><th>Саны</th><th>1 бөлме, м²</th><th>Барлығы, м²</th><th>Биікт., м</th><th>Көлемі, м³</th><th>Норма</th><th>Көзі</th><th>Мақсаты</th></tr></thead><tbody>';
+  let cur=null, tot=0, cnt=0;
+  rows.forEach(({d,r})=>{
+    if(cur!==d.id){ cur=d.id; const s=d.rooms.reduce((a,x)=>a+x.area*x.count,0); html+=`<tr class="grp"><td>${d.floor}</td><td>${d.wing===1?'А':'Б'}</td><td><span class="sw" style="--c:${d.color};display:inline-block;margin-right:6px;vertical-align:-1px"></span>${esc(d.name)}</td><td></td><td></td><td class="n">${fmt(s,1)}</td><td></td><td></td><td></td><td></td><td></td></tr>`; }
+    const st=SRC[r.src]||SRC.P; tot+=r.area*r.count; cnt+=r.count;
+    html+=`<tr class="${r.min&&r.area<r.min?'under':''}"><td></td><td></td><td>${esc(r.name)}</td><td class="n">${r.count}</td><td class="n ar">${fmt(r.area,1)}</td><td class="n">${fmt(r.area*r.count,1)}</td><td class="n">${fmt(rH(r),1)}</td><td class="n">${fmt(r.area*rH(r)*r.count,0)}</td><td class="n">${r.min?fmt(r.min,1):'—'}</td><td><span class="tag ${st[0]}">${st[1]}</span></td><td class="pur">${esc(r.purpose||'')}</td></tr>`;
+  });
+  html+=`</tbody><tfoot><tr><td colspan="3">Барлығы (бағдарлама)</td><td class="n">${cnt}</td><td></td><td class="n">${fmt(tot,1)}</td><td></td><td class="n">${fmt(rows.reduce((a,{r})=>a+r.area*rH(r)*r.count,0),0)}</td><td colspan="3"></td></tr></tfoot>`;
+  $('#sched').innerHTML=html;
+  $('#schedSum').textContent=cnt+' бөлме · '+fmt(tot,0)+' м²';
+}
+
+/* ---------- SVG plan ---------- */
+function wrap(text,max){
+  const words=String(text).split(/\s+/); const lines=[]; let cur='';
+  words.forEach(w=>{ if(!cur) cur=w; else if((cur+' '+w).length<=max) cur+=' '+w; else { lines.push(cur); cur=w; } });
+  if(cur) lines.push(cur);
+  return lines.map(l=>l.length>max?l.slice(0,Math.max(1,max-1))+'…':l);
+}
+function label(cx,cz,w,h,name,area){
+  const vertical=w<h&&w<4.2; const len=vertical?h:w, thick=vertical?w:h;
+  let fs=clamp(Math.min(0.62,thick/3.0),0.3,0.62);
+  const maxCh=Math.max(4,Math.floor((len-0.5)/(fs*0.56)));
+  const lh=fs*1.18; const avail=Math.max(1,Math.floor((thick-0.3)/lh));
+  let lines=wrap(name,maxCh); const showArea=avail>=2;
+  const nl=Math.max(1,Math.min(lines.length,avail-(showArea?1:0)));
+  if(lines.length>nl){ lines=lines.slice(0,nl); const l=lines[nl-1]; lines[nl-1]=(l.length>maxCh-1?l.slice(0,maxCh-1):l)+'…'; }
+  const total=lines.length+(showArea?1:0); const y0=cz-(total-1)*lh/2+fs*0.35;
+  let s=`<g${vertical?` transform="rotate(-90 ${cx} ${cz})"`:''}>`;
+  lines.forEach((l,i)=>{ s+=`<text class="pl-t" x="${cx}" y="${(y0+i*lh).toFixed(2)}" font-size="${fs.toFixed(2)}" text-anchor="middle">${esc(l)}</text>`; });
+  if(showArea) s+=`<text class="pl-a" x="${cx}" y="${(y0+lines.length*lh).toFixed(2)}" font-size="${(fs*0.85).toFixed(2)}" text-anchor="middle">${fmt(area,1)} м²</text>`;
+  return s+'</g>';
+}
+function arrow(p,n,color,txt){
+  const ox=p[0]+n[0]*4.2, oz=p[1]+n[1]*4.2;
+  return `<line x1="${ox}" y1="${oz}" x2="${p[0]+n[0]*0.4}" y2="${p[1]+n[1]*0.4}" stroke="${color}" stroke-width=".42" marker-end="url(#ah-${color.slice(1)})"/>`+
+   (txt?`<text class="pl-dimt" x="${ox+n[0]*0.6}" y="${oz+n[1]*0.9+(n[1]===0?0.25:0)}" font-size=".7" text-anchor="${n[0]>0?'start':n[0]<0?'end':'middle'}" style="fill:${color}">${txt}</text>`:'');
+}
+function arrowOut(p,n,color,txt){
+  const ox=p[0]+n[0]*3.6, oz=p[1]+n[1]*3.6;
+  return `<line x1="${p[0]+n[0]*0.3}" y1="${p[1]+n[1]*0.3}" x2="${ox}" y2="${oz}" stroke="${color}" stroke-width=".32" stroke-dasharray=".6 .4" marker-end="url(#ah-${color.slice(1)})"/>`+
+   (txt?`<text class="pl-dimt" x="${ox+n[0]*0.6}" y="${oz+n[1]*1.1+(n[1]===0?0.25:0)}" font-size=".7" text-anchor="${n[0]>0?'start':n[0]<0?'end':'middle'}" style="fill:${color}">${txt}</text>`:'');
+}
+function flowsFor(f){
+  const L=LAY, out=[]; const items=L.floors[f].filter(o=>o.kind==='room');
+  const ref=o=>({wing:o.wing,u:o.u+o.w/2,pt:[(o.r.x0+o.r.x1)/2,(o.r.z0+o.r.z1)/2]});
+  const zref=id=>{ const z=L.zones[id]; const u=(z.u0+z.u1)/2; return {wing:z.wing,u,pt:L.corrPt(z.wing,u)}; };
+  const hub={hub:true,pt:L.HUBN};
+  function path(a,b){
+    const pts=[a.pt];
+    if(!a.hub&&!b.hub&&a.wing===b.wing){ pts.push(L.corrPt(a.wing,a.u),L.corrPt(b.wing,b.u),b.pt); return pts; }
+    if(!a.hub) pts.push(L.corrPt(a.wing,a.u),L.corrPt(a.wing,0));
+    pts.push(L.HUBN);
+    if(!b.hub) pts.push(L.corrPt(b.wing,0),L.corrPt(b.wing,b.u));
+    pts.push(b.pt); return pts;
+  }
+  const depts=S.depts.filter(d=>d.on&&d.floor===f&&L.zones[d.id]);
+  const svc=['service','service2','ems','admin'];
+  if(f===1){
+    const me=L.mainEntry; const start=[[me.p[0],me.p[1]-4],me.p];
+    depts.filter(d=>(!d.kids||d.id==='mother')&&!svc.includes(d.id)).forEach(d=>out.push({t:'adult',pts:[...start,...path(hub,zref(d.id))]}));
+    const ke=items.find(o=>o.room.tags.includes('entrance-kids'));
+    if(ke){ const fp=ke.fac; const st=[[fp.p[0]+fp.n[0]*4,fp.p[1]+fp.n[1]*4],fp.p];
+      depts.filter(d=>d.kids&&d.id!=='mother').forEach(d=>out.push({t:'kids',pts:[...st,...path(ref(ke),zref(d.id))]})); }
+    const ee=items.find(o=>o.room.tags.includes('entrance-ems'));
+    if(ee){ const fp=ee.fac; out.push({t:'ems',pts:[[fp.p[0]+fp.n[0]*4,fp.p[1]+fp.n[1]*4],fp.p,ref(ee).pt]}); }
+  } else {
+    depts.filter(d=>!svc.includes(d.id)).forEach(d=>out.push({t:'adult',pts:path(hub,zref(d.id))}));
+  }
+  const wr=items.find(o=>o.room.tags.includes('exit-waste'));
+  items.filter(o=>o.room.tags.includes('waste-src')).forEach(o=>{
+    if(wr){ const fp=wr.fac; out.push({t:'waste',pts:[...path(ref(o),ref(wr)),fp.p,[fp.p[0]+fp.n[0]*3,fp.p[1]+fp.n[1]*3]]}); }
+    else out.push({t:'waste',pts:path(ref(o),hub)});
+  });
+  return out;
+}
+function renderPlan(){
+  const L=LAY; const floors=ui.floor==='all'?[1,2]:[+ui.floor];
+  const pad=8, bw=L.bbox.x1-L.bbox.x0, bh=L.bbox.z1-L.bbox.z0, fh=bh+pad*2+2;
+  const H=fh*floors.length;
+  if(!ui.planZoom){ const cw=($('#planWrap').clientWidth||800)-4; ui.planZoom=clamp(cw/(bw+pad*2),11,40); }
+  const cols=['1C7ED6','F76707','E03131','8D6E63','868E96'];
+  let s=`<svg style="width:${Math.round((bw+pad*2)*ui.planZoom)}px" viewBox="${-pad} 0 ${bw+pad*2} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Қабат жоспары"><defs>
+   <pattern id="hatch" width="1" height="1" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="1" stroke="var(--muted)" stroke-width=".12" stroke-opacity=".6"/></pattern>
+   <pattern id="stairp" width=".45" height="10" patternUnits="userSpaceOnUse"><rect width=".45" height="10" fill="var(--panel-2)"/><line x1="0" y1="0" x2="0" y2="10" stroke="var(--muted)" stroke-width=".07"/></pattern>
+   ${cols.map(c=>`<marker id="ah-${c}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#${c}"/></marker>`).join('')}
+  </defs>`;
+  floors.forEach((f,i)=>{
+    const oy=i*fh+pad+1;
+    s+=`<g transform="translate(0 ${oy})">`;
+    s+=`<text class="pl-title" x="-${pad-1}" y="-6.4" font-size="1.3">${f}-ҚАБАТ</text>`;
+    L.pieces.forEach(p=>{ s+=`<rect x="${p.x0}" y="${p.z0}" width="${p.x1-p.x0}" height="${p.z1-p.z0}" fill="var(--panel)" />`; });
+    L.floors[f].forEach(o=>{
+      const r=o.r, w=r.x1-r.x0, h=r.z1-r.z0;
+      if(o.kind==='corr') s+=`<rect class="pl-corr" x="${r.x0}" y="${r.z0}" width="${w}" height="${h}"/>`;
+    });
+    L.floors[f].forEach(o=>{
+      const r=o.r, w=r.x1-r.x0, h=r.z1-r.z0, cx=(r.x0+r.x1)/2, cz=(r.z0+r.z1)/2;
+      if(o.kind==='room'){
+        const d=deptById(o.dept); const dim=ui.sel&&ui.sel!=='hub'&&ui.sel!==o.dept;
+        s+=`<g class="pl-room${ui.room===o.key?' sel':''}${dim?' dim':''}" data-key="${o.key}" data-dept="${o.dept}"><title>${esc(o.room.name)} · ${fmt(o.area,1)} м²</title><rect x="${r.x0}" y="${r.z0}" width="${w}" height="${h}" fill="${d.color}" fill-opacity=".26"/>${label(cx,cz,w,h,o.room.name,o.area)}</g>`;
+      } else if(o.kind==='reserve'){
+        s+=`<g><title>Резерв ${fmt(o.area,1)} м²</title><rect x="${r.x0}" y="${r.z0}" width="${w}" height="${h}" fill="url(#hatch)" stroke="var(--fg)" stroke-opacity=".35" stroke-width=".06"/>${w>2.2&&h>2.2?label(cx,cz,w,h,'Резерв',o.area):''}</g>`;
+      } else if(o.kind==='stair'){
+        s+=`<g class="pl-room" data-dept="hub"><title>Эвакуациялық баспалдақ</title><rect x="${r.x0}" y="${r.z0}" width="${w}" height="${h}" fill="url(#stairp)" stroke="var(--fg)" stroke-opacity=".55" stroke-width=".08"/>${label(cx,cz,w,h,'Баспалдақ',w*h)}</g>`;
+      } else if(o.kind==='hub'){
+        const dim=ui.sel&&ui.sel!=='hub';
+        s+=`<g class="pl-room${ui.sel==='hub'?' sel':''}${dim?' dim':''}" data-dept="hub"><title>Орталық холл</title><rect x="${r.x0}" y="${r.z0}" width="${w}" height="${h}" fill="var(--corr)" fill-opacity=".35"/>`;
+        // stair + lift
+        s+=`<rect x="${r.x0+0.4}" y="${r.z0+0.4}" width="3.2" height="${L.D-0.8}" fill="url(#stairp)" stroke="var(--fg)" stroke-opacity=".5" stroke-width=".08"/>`;
+        s+=`<rect x="${r.x0+3.9}" y="${r.z0+0.4}" width="2.4" height="2.6" fill="var(--stair)" fill-opacity=".55" stroke="var(--fg)" stroke-opacity=".5" stroke-width=".08"/><text class="pl-a" x="${r.x0+5.1}" y="${r.z0+1.9}" font-size=".5" text-anchor="middle">лифт</text>`;
+        const t=f===1?['Орталық холл','Тамбур · регистратура','гардероб · күту']:['Холл және күту','баспалдақ · лифт'];
+        t.forEach((l,k)=>{ s+=`<text class="${k?'pl-a':'pl-t'}" x="${cx+1.5}" y="${cz+k*0.95}" font-size="${k?0.55:0.75}" text-anchor="middle">${l}</text>`; });
+        if(f===1){ s+=`<rect x="${cx-1}" y="${r.z0+L.D+L.C+0.6}" width="5" height="1.1" rx=".5" fill="var(--panel)" stroke="var(--fg)" stroke-opacity=".5" stroke-width=".08"/><text class="pl-a" x="${cx+1.5}" y="${r.z0+L.D+L.C+1.35}" font-size=".5" text-anchor="middle">тіркеу</text>`; }
+        s+='</g>';
+      }
+    });
+    // corridor side labels
+    if(L.LW[1]>0){ s+=`<text class="pl-side" x="0.4" y="-0.6" font-size=".62">А жағы</text><text class="pl-side" x="0.4" y="${L.W+1.2}" font-size=".62">Б жағы</text>`; }
+    if(L.LW[2]>0){ if(L.isL){ s+=`<text class="pl-side" x="${L.X0+L.W+0.5}" y="${L.W+1.6}" font-size=".62">А жағы</text><text class="pl-side" x="${L.X0-0.5}" y="${L.W+1.6}" font-size=".62" text-anchor="end">Б жағы</text>`; }
+      else { const xe=L.bbox.x1-0.4; s+=`<text class="pl-side" x="${xe}" y="-0.6" font-size=".62" text-anchor="end">А жағы</text><text class="pl-side" x="${xe}" y="${L.W+1.2}" font-size=".62" text-anchor="end">Б жағы</text>`; } }
+    // outline
+    L.pieces.forEach(p=>{ s+=`<rect class="pl-out" x="${p.x0}" y="${p.z0}" width="${p.x1-p.x0}" height="${p.z1-p.z0}"/>`; });
+    // entrances
+    if(f===1){
+      s+=arrow(L.mainEntry.p,L.mainEntry.n,FLOW_C.adult,'Негізгі кіреберіс');
+      L.floors[1].filter(o=>o.kind==='room').forEach(o=>{
+        const t=o.room.tags;
+        if(t.includes('entrance-kids')) s+=arrow(o.fac.p,o.fac.n,FLOW_C.kids,'Балалар кіреберісі');
+        if(t.includes('entrance-ems')) s+=arrow(o.fac.p,o.fac.n,FLOW_C.ems,'Жедел жәрдем');
+        if(t.includes('exit-waste')) s+=arrowOut(o.fac.p,o.fac.n,FLOW_C.waste,'Медқалдық шығысы');
+        if(t.includes('entrance-staff')) s+=arrow(o.fac.p,o.fac.n,FLOW_C.waste,'Персонал');
+        if(t.includes('exit-box')) s+=arrowOut(o.fac.p,o.fac.n,'#868E96','');
+      });
+    }
+    // flows
+    if(ui.flows){
+      flowsFor(f).forEach(fl=>{ s+=`<polyline class="flow" points="${fl.pts.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ')}" stroke="${FLOW_C[fl.t]}" stroke-opacity=".85" marker-end="url(#ah-${FLOW_C[fl.t].slice(1)})"/>`; });
+    }
+    // dimensions
+    s+=`<g><line class="pl-dim" x1="0" y1="${bh+2.2}" x2="${bw}" y2="${bh+2.2}"/><line class="pl-dim" x1="0" y1="${bh+1.6}" x2="0" y2="${bh+2.8}"/><line class="pl-dim" x1="${bw}" y1="${bh+1.6}" x2="${bw}" y2="${bh+2.8}"/><text class="pl-dimt" x="${bw/2}" y="${bh+3.6}" font-size=".8" text-anchor="middle">${fmt(bw,1)} м</text></g>`;
+    s+=`<g transform="translate(${bw-10} ${bh+4.6})"><rect x="0" y="0" width="5" height=".35" fill="var(--fg)"/><rect x="5" y="0" width="5" height=".35" fill="none" stroke="var(--fg)" stroke-width=".06"/><text class="pl-dimt" x="0" y="1.3" font-size=".6">0</text><text class="pl-dimt" x="10" y="1.3" font-size=".6" text-anchor="end">10 м</text></g>`;
+    s+='</g>';
+  });
+  s+='</svg>';
+  $('#planWrap').innerHTML=s;
+}
+
+/* ---------- 3D ---------- */
+const V={ok:false};
+function cssVar(n){ const st=document.getElementById('stage'); return getComputedStyle(st||document.documentElement).getPropertyValue(n).trim()||'#888'; }
+function init3D(){
+  const cv=$('#cv');
+  if(!window.THREE){ fail3D('3D кітапханасы жүктелмеді. Қабат жоспары көрсетілді.'); return; }
+  try{ V.renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true}); }catch(e){ fail3D('Бұл құрылғыда WebGL жоқ. Қабат жоспары көрсетілді.'); return; }
+  V.ok=true;
+  const R=V.renderer; R.setPixelRatio(Math.min(2,window.devicePixelRatio||1)); R.shadowMap.enabled=true; R.shadowMap.type=THREE.PCFSoftShadowMap;
+  V.scene=new THREE.Scene();
+  V.camera=new THREE.PerspectiveCamera(38,1,0.5,2000);
+  V.hemi=new THREE.HemisphereLight(0xffffff,0x8a9a94,0.75); V.scene.add(V.hemi);
+  V.sun=new THREE.DirectionalLight(0xffffff,0.75); V.sun.castShadow=true; V.sun.shadow.mapSize.set(2048,2048); V.sun.shadow.bias=-0.0008; V.scene.add(V.sun); V.scene.add(V.sun.target);
+  V.world=new THREE.Group(); V.scene.add(V.world);
+  V.cam={theta:2.3,phi:0.88,r:110,target:new THREE.Vector3()};
+  V.explodeCur=ui.explode?1:0; V.floorGroups={}; V.roomMeshes=[]; V.labels=[];
+  V.ray=new THREE.Raycaster(); V.mouse=new THREE.Vector2();
+  const ro=new ResizeObserver(()=>resize3D()); ro.observe($('#stage'));
+  bindOrbit(cv);
+  resize3D();
+  requestAnimationFrame(loop);
+}
+function fail3D(msg){
+  V.ok=false; ui.view='plan';
+  const st=$('#stage'); const f=document.createElement('div'); f.className='fallback'; f.textContent=msg; f.id='fb'; f.style.pointerEvents='none'; st.appendChild(f);
+  $('#cv').hidden=true; $('#camBtns').hidden=true;
+  setTimeout(()=>{ syncToolbar(); },0);
+}
+function resize3D(){
+  if(!V.ok) return; const st=$('#stage'); const w=st.clientWidth, h=st.clientHeight; if(!w||!h) return;
+  V.renderer.setSize(w,h,false); V.camera.aspect=w/h; V.camera.updateProjectionMatrix();
+}
+function disposeGroup(g){
+  g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ if(m.map) m.map.dispose(); m.dispose(); }); } });
+}
+let winTex=null;
+function windowTexture(){
+  if(winTex) return winTex;
+  const c=document.createElement('canvas'); c.width=128; c.height=128; const x=c.getContext('2d');
+  x.fillStyle='#F3F4F2'; x.fillRect(0,0,128,128);
+  x.fillStyle='#3B5560'; x.fillRect(22,30,84,62);
+  x.fillStyle='#5E7C88'; x.fillRect(22,30,84,10);
+  x.fillStyle='#E1E4E1'; x.fillRect(62,30,4,62); x.fillRect(16,92,96,6);
+  winTex=c; return c;
+}
+function facadeMat(len){
+  const t=new THREE.CanvasTexture(windowTexture()); t.wrapS=THREE.RepeatWrapping; t.repeat.set(Math.max(1,Math.round(len/3.2)),1);
+  return new THREE.MeshStandardMaterial({map:t,roughness:.9});
+}
+function makeLabel(text,color){
+  const c=document.createElement('canvas'); const x=c.getContext('2d'); const fs=40; const font=`600 ${fs}px "IBM Plex Sans", system-ui, sans-serif`;
+  x.font=font; const tw=x.measureText(text).width; c.width=Math.ceil(tw+70); c.height=66;
+  x.font=font; const bg=cssVar('--panel'), fg=cssVar('--fg');
+  x.fillStyle=bg; x.globalAlpha=.94; const r=14; x.beginPath(); x.moveTo(r,0); x.lineTo(c.width-r,0); x.quadraticCurveTo(c.width,0,c.width,r); x.lineTo(c.width,c.height-r); x.quadraticCurveTo(c.width,c.height,c.width-r,c.height); x.lineTo(r,c.height); x.quadraticCurveTo(0,c.height,0,c.height-r); x.lineTo(0,r); x.quadraticCurveTo(0,0,r,0); x.fill();
+  x.globalAlpha=1; x.fillStyle=color; x.beginPath(); x.arc(30,33,10,0,Math.PI*2); x.fill();
+  x.fillStyle=fg; x.textBaseline='middle'; x.fillText(text,50,35);
+  const tex=new THREE.CanvasTexture(c); tex.minFilter=THREE.LinearFilter;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true}));
+  const k=0.026; sp.scale.set(c.width*k,c.height*k,1); sp.renderOrder=20; return sp;
+}
+function build3D(animate){
+  if(!V.ok) return;
+  disposeGroup(V.world); V.scene.remove(V.world); V.world=new THREE.Group(); V.scene.add(V.world);
+  V.roomMeshes=[]; V.labels=[]; V.floorGroups={}; V.anims=[];
+  const L=LAY, H=S.b.floorH, rh=Math.min(2.5,H-0.9);
+  const cSlab=new THREE.Color(cssVar('--slab')), cCorr=new THREE.Color(cssVar('--corr')), cStair=new THREE.Color(cssVar('--stair')), cGround=new THREE.Color(BG[BGK].ground||cssVar('--ground')); if(BG[BGK].ground) cGround.multiplyScalar(0.72);
+  // ground
+  const gsz=BGK==='studio'?Math.max(L.bbox.x1,L.bbox.z1)*3+120:Math.max(L.bbox.x1,L.bbox.z1)+60;
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(gsz,gsz),new THREE.MeshStandardMaterial({color:cGround,roughness:1}));
+  ground.rotation.x=-Math.PI/2; ground.position.set(L.bbox.x1/2,-0.32,L.bbox.z1/2); ground.receiveShadow=true; V.world.add(ground);
+  const gC=new THREE.Color(BG[BGK].gridC||cssVar('--stair')); const grid=new THREE.GridHelper(gsz,Math.round(gsz/6),gC,gC); grid.material.transparent=true; grid.material.opacity=BG[BGK].grid;
+  V.hemi.intensity=BG[BGK].hemi; V.sun.intensity=BG[BGK].sun; grid.position.copy(ground.position); grid.position.y=-0.31; V.world.add(grid);
+  // trees
+  const treeM=new THREE.MeshStandardMaterial({color:0x7FA88A,roughness:1}), trunkM=new THREE.MeshStandardMaterial({color:0x8B7765});
+  let seed=7; const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+  const treeSpots=[];
+  for(let x=-4;x<=L.bbox.x1+4;x+=7) treeSpots.push([x,-9-rnd()*3]);
+  for(let z=4;z<=L.bbox.z1+4;z+=7) treeSpots.push([-9-rnd()*3,z]);
+  if(L.isL) for(let z=L.W+6;z<=L.bbox.z1;z+=8) treeSpots.push([L.X0-8-rnd()*4,z]);
+  treeSpots.forEach(([x,z])=>{ if(Math.abs(x-L.mainEntry.p[0])<6&&z<0) return; const t=new THREE.Group(); const s=0.8+rnd()*0.6;
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.15,.2,1.6*s,6),trunkM); tr.position.y=0.5*s; const cr=new THREE.Mesh(new THREE.IcosahedronGeometry(1.5*s,0),treeM); cr.position.y=2.2*s; cr.castShadow=true;
+    t.add(tr,cr); t.position.set(x,-0.3,z); V.world.add(t); });
+  // entrance markers
+  const entries=[{p:L.mainEntry.p,n:L.mainEntry.n,c:FLOW_C.adult}];
+  L.floors[1].filter(o=>o.kind==='room').forEach(o=>{ const t=o.room.tags; if(t.includes('entrance-kids')) entries.push({p:o.fac.p,n:o.fac.n,c:FLOW_C.kids}); if(t.includes('entrance-ems')) entries.push({p:o.fac.p,n:o.fac.n,c:FLOW_C.ems}); });
+  entries.forEach(e=>{ const m=new THREE.Mesh(new THREE.ConeGeometry(.9,2.2,3),new THREE.MeshStandardMaterial({color:new THREE.Color(e.c)}));
+    const ang=Math.atan2(-e.n[0],-e.n[1]); const g=new THREE.Group(); g.add(m); m.rotation.set(Math.PI/2,0,0); g.rotation.y=ang; g.position.set(e.p[0]+e.n[0]*2.6,-0.1,e.p[1]+e.n[1]*2.6); V.world.add(g);
+    const pad=new THREE.Mesh(new THREE.BoxGeometry(e.n[0]?2.4:5,0.1,e.n[0]?5:2.4),new THREE.MeshStandardMaterial({color:cSlab})); pad.position.set(e.p[0]+e.n[0]*1.2,-0.27,e.p[1]+e.n[1]*1.2); V.world.add(pad); });
+  [1,2].forEach(f=>{
+    const g=new THREE.Group(); g.userData.floor=f; V.floorGroups[f]=g; V.world.add(g);
+    const interior=new THREE.Group(), shell=new THREE.Group(); g.add(interior); g.add(shell); g.userData.interior=interior; g.userData.shell=shell;
+    const fd=(f-1)*1.15;
+    L.pieces.forEach(p=>{ const w=p.x1-p.x0, d=p.z1-p.z0;
+      const slab=new THREE.Mesh(new THREE.BoxGeometry(w+0.3,0.3,d+0.3),new THREE.MeshStandardMaterial({color:cSlab,roughness:.9}));
+      slab.geometry.translate(0,-0.15,0); slab.position.set(p.x0+w/2,0,p.z0+d/2); slab.receiveShadow=true; slab.castShadow=true; interior.add(slab); V.anims.push({o:slab,delay:fd,kind:'slab'});
+      const sh=new THREE.Mesh(new THREE.BoxGeometry(w,H-0.3,d),[facadeMat(d),facadeMat(d),new THREE.MeshStandardMaterial({color:cSlab}),new THREE.MeshStandardMaterial({color:cSlab}),facadeMat(w),facadeMat(w)]);
+      sh.position.set(p.x0+w/2,(H-0.3)/2,p.z0+d/2); sh.castShadow=true; sh.receiveShadow=true; shell.add(sh);
+      if(f===2){ const roof=new THREE.Mesh(new THREE.BoxGeometry(w+0.5,0.5,d+0.5),new THREE.MeshStandardMaterial({color:cStair})); roof.position.set(p.x0+w/2,H-0.05,p.z0+d/2); roof.castShadow=true; shell.add(roof); }
+    });
+    const maxU=Math.max(L.LW[1],L.LW[2],1);
+    L.floors[f].forEach(o=>{
+      const r=o.r, w=r.x1-r.x0, d=r.z1-r.z0, cx=(r.x0+r.x1)/2, cz=(r.z0+r.z1)/2;
+      if(o.kind==='room'||o.kind==='reserve'){
+        const isRes=o.kind==='reserve'; const hh=isRes?0.25:rh*clamp(o.room.h/defH(),0.6,1.3); const gap=0.16;
+        const geo=new THREE.BoxGeometry(Math.max(0.1,w-gap),hh,Math.max(0.1,d-gap)); geo.translate(0,hh/2,0);
+        const col=isRes?cCorr:new THREE.Color(deptById(o.dept).color).lerp(cSlab,0.16);
+        const mat=new THREE.MeshStandardMaterial({color:col,roughness:.78,metalness:0,transparent:isRes,opacity:isRes?.55:1});
+        const m=new THREE.Mesh(geo,mat); m.position.set(cx,0,cz); m.castShadow=!isRes; m.receiveShadow=true;
+        m.userData={kind:o.kind,key:o.key,dept:o.dept,o};
+        interior.add(m); if(!isRes) V.roomMeshes.push(m);
+        V.anims.push({o:m,delay:fd+0.35+(o.u/maxU)*1.0+(o.side==='B'?0.08:0),kind:'room'});
+      } else if(o.kind==='corr'){
+        const m=new THREE.Mesh(new THREE.BoxGeometry(w,0.06,d),new THREE.MeshStandardMaterial({color:cCorr})); m.position.set(cx,0.03,cz); m.receiveShadow=true; interior.add(m);
+      } else if(o.kind==='stair'){
+        const m=stairMesh(Math.min(w,6.4),Math.min(d,6.4),rh,cStair); m.position.set(cx,0,cz); interior.add(m); V.anims.push({o:m,delay:fd+0.3,kind:'room'});
+      } else if(o.kind==='hub'){
+        const hub=new THREE.Group();
+        const fl=new THREE.Mesh(new THREE.BoxGeometry(w-0.2,0.08,d-0.2),new THREE.MeshStandardMaterial({color:cCorr})); fl.position.set(cx,0.04,cz); fl.receiveShadow=true; hub.add(fl);
+        const st=stairMesh(3.2,L.D-0.8,rh,cStair); st.position.set(r.x0+0.4+1.6,0,r.z0+0.4+(L.D-0.8)/2); hub.add(st);
+        const lift=new THREE.Mesh(new THREE.BoxGeometry(2.4,H+0.1,2.6),new THREE.MeshStandardMaterial({color:new THREE.Color(cssVar('--accent')),roughness:.6})); lift.geometry.translate(0,(H+0.1)/2,0); lift.position.set(r.x0+3.9+1.2,0,r.z0+0.4+1.3); lift.castShadow=true; hub.add(lift);
+        if(f===1){ const desk=new THREE.Mesh(new THREE.BoxGeometry(5,1.1,1.1),new THREE.MeshStandardMaterial({color:cSlab})); desk.geometry.translate(0,0.55,0); desk.position.set(cx+1.5,0,r.z0+L.D+L.C+1.15); desk.castShadow=true; hub.add(desk);
+          for(let k=0;k<3;k++){ const bench=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.45,0.6),new THREE.MeshStandardMaterial({color:cStair})); bench.geometry.translate(0,.22,0); bench.position.set(r.x0+w-3-k*0.01,0,r.z0+L.D+L.C+2.5+k*1.4); hub.add(bench); } }
+        hub.userData={kind:'hub'}; hub.children.forEach(c=>c.userData={kind:'hub'});
+        V.roomMeshes.push(...hub.children);
+        interior.add(hub); V.anims.push({o:hub,delay:fd+0.2,kind:'room'});
+      }
+    });
+    // labels per dept
+    S.depts.filter(d=>d.on&&d.floor===f&&L.zones[d.id]).forEach(d=>{
+      const z=L.zones[d.id]; const u=(z.u0+z.u1)/2; const p=L.corrPt(z.wing,u);
+      const sp=makeLabel(d.short||d.name,d.color); sp.position.set(p[0],rh+2.4,p[1]); sp.userData={floor:f,dept:d.id}; interior.add(sp); V.labels.push(sp);
+    });
+  });
+  // sun & shadow camera
+  const cx=L.bbox.x1/2, cz=L.bbox.z1/2, ext=Math.max(L.bbox.x1,L.bbox.z1);
+  V.sun.position.set(cx-ext*0.6,ext*1.1,cz-ext*0.9); V.sun.target.position.set(cx,0,cz);
+  const sc=V.sun.shadow.camera; sc.left=-ext; sc.right=ext; sc.top=ext; sc.bottom=-ext; sc.near=1; sc.far=ext*4; sc.updateProjectionMatrix();
+  if(!V.camInit){ resetCam(); V.camInit=true; }
+  V.animT0=(animate&&!reduceMotion)?performance.now():-1e9; V.labelsPending=animate&&!reduceMotion;
+  apply3DState(); applyHighlight();
+}
+function stairMesh(w,d,h,col){
+  const g=new THREE.Group(); const mat=new THREE.MeshStandardMaterial({color:col,roughness:.85});
+  const longX=w>=d; const Lg=(longX?w:d)-0.2, Sh=(longX?d:w)-0.2; const n=9;
+  const base=new THREE.Mesh(new THREE.BoxGeometry(w-0.1,0.1,d-0.1),mat); base.position.y=0.05; g.add(base);
+  for(let k=0;k<2;k++) for(let i=0;i<n;i++){
+    const sh=(k*n+i+1)/(2*n)*h; const a=Lg/n, b=Sh/2-0.08;
+    const geo=longX?new THREE.BoxGeometry(a,sh,b):new THREE.BoxGeometry(b,sh,a); geo.translate(0,sh/2,0);
+    const m=new THREE.Mesh(geo,mat); m.castShadow=true;
+    const along=k===0?-Lg/2+(i+.5)*a:Lg/2-(i+.5)*a, across=k===0?-Sh/4:Sh/4;
+    if(longX) m.position.set(along,0,across); else m.position.set(across,0,along);
+    g.add(m);
+  }
+  g.userData={kind:'stair'}; return g;
+}
+function resetCam(){ const L=LAY; V.cam.target.set(L.bbox.x1/2,2,L.bbox.z1/2); V.cam.r=Math.max(L.bbox.x1,L.bbox.z1)*1.55+18; V.cam.theta=2.3; V.cam.phi=0.88; }
+function apply3DState(){
+  if(!V.ok) return;
+  [1,2].forEach(f=>{ const g=V.floorGroups[f]; if(!g) return;
+    g.visible=ui.floor==='all'||+ui.floor===f;
+    g.userData.interior.visible=!ui.shell; g.userData.shell.visible=ui.shell;
+  });
+  V.labels.forEach(sp=>{ const f=sp.userData.floor; sp.visible=!ui.shell&&(ui.floor==='all'?(f===2||ui.explode):+ui.floor===f); });
+}
+function applyHighlight(){
+  if(!V.ok) return;
+  V.roomMeshes.forEach(m=>{
+    const ud=m.userData; if(!m.material||!m.material.color) return;
+    let dim=false, hot=false;
+    if(ud.kind==='room'){ dim=ui.sel&&ui.sel!=='hub'&&ud.dept!==ui.sel; hot=ui.room===ud.key; }
+    else if(ud.kind==='hub'){ dim=ui.sel&&ui.sel!=='hub'; }
+    m.material.transparent=dim; m.material.opacity=dim?0.16:1; m.material.depthWrite=!dim;
+    if(m.material.emissive) m.material.emissive.set(hot?0x5a2000:0x000000);
+    m.material.needsUpdate=true;
+  });
+  V.labels.forEach(sp=>{ sp.material.opacity=(ui.sel&&ui.sel!=='hub'&&sp.userData.dept!==ui.sel)?0.35:1; });
+}
+function easeOutBack(t){ const c1=1.4, c3=c1+1; return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2); }
+function loop(now){
+  requestAnimationFrame(loop);
+  if(!V.ok||ui.view!=='3d') return;
+  const target=ui.explode&&ui.floor==='all'&&!ui.shell?1:0;
+  V.explodeCur+=(target-V.explodeCur)*(reduceMotion?1:0.12);
+  const H=S.b.floorH;
+  if(V.floorGroups[1]) V.floorGroups[1].position.y=0;
+  if(V.floorGroups[2]) V.floorGroups[2].position.y=(ui.floor==='2'?0:H)+V.explodeCur*13;
+  const t=(now-V.animT0)/1000;
+  if(V.labelsPending){ if(t>3.0){ V.labelsPending=false; apply3DState(); } else V.labels.forEach(sp=>sp.visible=false); }
+  if(V.anims) V.anims.forEach(a=>{ const p=clamp((t-a.delay)/(a.kind==='slab'?0.5:0.55),0,1);
+    const s=p>=1?1:Math.max(0.001,a.kind==='slab'?p:easeOutBack(p)); a.o.scale.y=s; a.o.visible=p>0||a.kind==='slab'; if(a.kind==='slab') a.o.scale.x=a.o.scale.z=0.2+0.8*Math.min(1,p*1.4); });
+  const c=V.cam, sp=Math.sin(c.phi);
+  V.camera.position.set(c.target.x+c.r*sp*Math.cos(c.theta),c.target.y+c.r*Math.cos(c.phi),c.target.z+c.r*sp*Math.sin(c.theta));
+  V.camera.lookAt(c.target);
+  V.renderer.render(V.scene,V.camera);
+}
+function bindOrbit(cv){
+  const ptrs=new Map(); let moved=0, last=null, pinch=0;
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+  cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,b:e.button,shift:e.shiftKey}); moved=0; last={x:e.clientX,y:e.clientY}; if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; pinch=Math.hypot(a.x-b.x,a.y-b.y);} $('#tip').hidden=true; });
+  cv.addEventListener('pointermove',e=>{
+    if(!ptrs.size){ hover(e); return; }
+    const p=ptrs.get(e.pointerId); if(!p) return;
+    const dx=e.clientX-p.x, dy=e.clientY-p.y; moved+=Math.abs(dx)+Math.abs(dy); p.x=e.clientX; p.y=e.clientY;
+    if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; const dd=Math.hypot(a.x-b.x,a.y-b.y); if(pinch){ V.cam.r=clamp(V.cam.r*pinch/dd,15,400);} pinch=dd; return; }
+    if(p.b===2||p.shift||e.shiftKey){ pan(dx,dy); }
+    else { V.cam.theta+=dx*0.0065; V.cam.phi=clamp(V.cam.phi-dy*0.0055,0.12,1.48); }
+  });
+  const up=e=>{ const had=ptrs.has(e.pointerId); ptrs.delete(e.pointerId); pinch=0; if(had&&moved<6&&e.type==='pointerup') pick(e); };
+  cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
+  cv.addEventListener('pointerleave',()=>{ if(!ptrs.size) $('#tip').hidden=true; });
+  cv.addEventListener('wheel',e=>{ e.preventDefault(); V.cam.r=clamp(V.cam.r*(1+Math.sign(e.deltaY)*Math.min(0.15,Math.abs(e.deltaY)*0.0012)),15,400); },{passive:false});
+}
+function pan(dx,dy){
+  const c=V.cam; const k=c.r*0.0016;
+  const fx=-Math.cos(c.theta), fz=-Math.sin(c.theta); // forward on ground
+  const rx=Math.sin(c.theta), rz=-Math.cos(c.theta);  // right
+  c.target.x+=-dx*k*rx+dy*k*fx; c.target.z+=-dx*k*rz+dy*k*fz;
+}
+function intersect(e){
+  const rect=$('#cv').getBoundingClientRect();
+  V.mouse.set(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
+  V.ray.setFromCamera(V.mouse,V.camera);
+  const vis=V.roomMeshes.filter(m=>{ let o=m; while(o){ if(!o.visible) return false; o=o.parent; } return true; });
+  const hits=V.ray.intersectObjects(vis,false);
+  return hits.find(h=>!(h.object.material.transparent&&h.object.material.opacity<0.5))||hits[0]||null;
+}
+function hover(e){
+  if(!V.ok) return; const h=intersect(e); const tip=$('#tip');
+  if(!h){ tip.hidden=true; return; }
+  const ud=h.object.userData; const rect=$('#stage').getBoundingClientRect();
+  if(ud.kind==='room'){ const d=deptById(ud.dept); tip.innerHTML=`<b>${esc(ud.o.room.name)}</b>${fmt(ud.o.area,1)} м² · ${esc(d.short||d.name)} · ${ud.o.floor}-қабат`; }
+  else tip.innerHTML='<b>Орталық холл</b>кіреберіс · регистратура · лифт';
+  tip.style.left=(e.clientX-rect.left)+'px'; tip.style.top=(e.clientY-rect.top)+'px'; tip.hidden=false;
+}
+function pick(e){
+  if(!V.ok) return; const h=intersect(e);
+  if(!h){ return; }
+  const ud=h.object.userData;
+  if(ud.kind==='room') select(ud.dept,ud.key); else select('hub',null);
+}
+
+/* ---------- selection & refresh ---------- */
+function select(dept,room){
+  ui.sel=dept; ui.room=room||null;
+  if(dept&&dept!=='hub') ui.open[dept]=ui.open[dept]||false;
+  renderPassport(); renderLegend(); applyHighlight(); if(ui.view==='plan') renderPlan();
+  document.querySelectorAll('.dept').forEach(el=>el.classList.toggle('sel',el.dataset.id===dept));
+}
+let buildTimer=null;
+function refresh(full,animate,keepPP){
+  syncAuto(); LAY=computeLayout(); M=metrics();
+  renderKPI(); renderLegend(); renderChecks(); renderSchedule();
+  if(keepPP){ const o=allRooms().find(x=>x.key===ui.room); const c=$('#reCalc'); if(o&&c) c.innerHTML=roomCalcHTML(o); else if(!o) renderPassport(); }
+  else renderPassport();
+  if(full||(keepPP&&ui.tab==='depts')) renderSide(); else { const cc=$('#capCalc'); if(cc) cc.outerHTML=capCalcHTML(); updateSums(); }
+  if(ui.view==='plan') renderPlan();
+  clearTimeout(buildTimer); buildTimer=setTimeout(()=>build3D(!!animate),animate?0:120);
+  persist();
+}
+function updateSums(){
+  S.depts.forEach(d=>{ const el=document.querySelector(`[data-sum="${d.id}"]`); if(el) el.textContent=fmt(d.rooms.reduce((s,r)=>s+(+r.area||0)*(+r.count||0),0))+' м²'; });
+}
+function syncToolbar(){
+  document.querySelectorAll('#segView button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===ui.view));
+  document.querySelectorAll('#segFloor button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===String(ui.floor)));
+  const is3d=ui.view==='3d';
+  $('#planWrap').hidden=is3d; $('#cv').style.visibility=is3d?'visible':'hidden';
+  $('#camBtns').hidden=is3d&&!V.ok; $('#zTop').hidden=!is3d; $('#hint').hidden=!is3d||!V.ok;
+  $('#optExplode').hidden=!is3d; $('#optShell').hidden=!is3d; $('#btnReplay').hidden=!is3d||!V.ok;
+  $('#optFlows').hidden=is3d; $('#flowLegend').hidden=is3d||!ui.flows;
+  if(!is3d) renderPlan();
+  apply3DState();
+}
+let toastT=null;
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2600); }
+
+/* ---------- events ---------- */
+document.querySelector('.tabs').addEventListener('click',e=>{ const b=e.target.closest('button[data-tab]'); if(!b) return; ui.tab=b.dataset.tab; renderSide(); });
+$('#segView').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.v==='3d'&&!V.ok){ toast('3D көрініс бұл құрылғыда қолжетімсіз'); return; } ui.view=b.dataset.v; syncToolbar(); });
+$('#segFloor').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; ui.floor=b.dataset.f; syncToolbar(); });
+$('#bgPick').innerHTML=Object.entries(BG).map(([k,p])=>`<button data-bg="${k}" title="${p.n}" aria-label="Фон: ${p.n}" aria-pressed="${k===BGK}" style="background:${p.sw}"></button>`).join('');
+$('#bgPick').addEventListener('click',e=>{ const b=e.target.closest('button[data-bg]'); if(!b) return; BGK=b.dataset.bg; try{ localStorage.setItem('ayan-builder-bg',BGK); }catch(err){} applyBg(); build3D(false); if(ui.view==='plan') renderPlan(); toast('Фон: '+BG[BGK].n); });
+$('#cbExplode').addEventListener('change',e=>{ ui.explode=e.target.checked; apply3DState(); });
+$('#cbShell').addEventListener('change',e=>{ ui.shell=e.target.checked; apply3DState(); });
+$('#cbFlows').addEventListener('change',e=>{ ui.flows=e.target.checked; syncToolbar(); });
+$('#btnReplay').addEventListener('click',()=>{ ui.shell=false; $('#cbShell').checked=false; build3D(true); });
+$('#zIn').addEventListener('click',()=>{ if(ui.view==='plan'){ ui.planZoom=clamp(ui.planZoom*1.25,6,60); renderPlan(); } else V.cam.r=clamp(V.cam.r*0.8,15,400); });
+$('#zOut').addEventListener('click',()=>{ if(ui.view==='plan'){ ui.planZoom=clamp(ui.planZoom/1.25,6,60); renderPlan(); } else V.cam.r=clamp(V.cam.r*1.25,15,400); });
+$('#zTop').addEventListener('click',()=>{ V.cam.phi=0.13; V.cam.theta=-Math.PI/2; });
+$('#zReset').addEventListener('click',()=>{ if(ui.view==='plan'){ const w=$('#planWrap').clientWidth-4; ui.planZoom=clamp(w/(LAY.bbox.x1+16),6,60); renderPlan(); } else resetCam(); });
+$('#legend').addEventListener('click',e=>{ const b=e.target.closest('[data-dept]'); if(!b) return; const id=b.dataset.dept; select(ui.sel===id&&!ui.room?null:id,null); });
+let pdrag=null, suppressClick=false;
+$('#planWrap').addEventListener('pointerdown',e=>{ if(e.button!==0||e.pointerType==='touch') return; const g=e.target.closest('.pl-room[data-key]'); if(!g) return; pdrag={key:g.dataset.key,x:e.clientX,y:e.clientY,on:false,src:g,tgt:null}; });
+window.addEventListener('pointermove',e=>{
+  if(!pdrag) return;
+  if(!pdrag.on){ if(Math.hypot(e.clientX-pdrag.x,e.clientY-pdrag.y)<6) return; pdrag.on=true; pdrag.src.classList.add('drag-src'); $('#planWrap').classList.add('dragging');
+    const gh=$('#dragGhost'); const f=findRoom(parseKey(pdrag.key).rid); gh.textContent=f?f.r.name:''; gh.hidden=false; }
+  const gh=$('#dragGhost'); gh.style.left=e.clientX+'px'; gh.style.top=e.clientY+'px';
+  const el=document.elementFromPoint(e.clientX,e.clientY); const t=el&&el.closest?el.closest('#planWrap .pl-room[data-key]'):null;
+  if(pdrag.tgt&&pdrag.tgt!==t) pdrag.tgt.classList.remove('drop-tgt');
+  pdrag.tgt=(t&&t!==pdrag.src)?t:null; if(pdrag.tgt) pdrag.tgt.classList.add('drop-tgt');
+});
+window.addEventListener('pointerup',()=>{
+  if(!pdrag) return; const d=pdrag; pdrag=null; if(!d.on) return;
+  suppressClick=true; setTimeout(()=>{ suppressClick=false; },0);
+  $('#dragGhost').hidden=true; $('#planWrap').classList.remove('dragging'); d.src.classList.remove('drag-src');
+  if(!d.tgt) return;
+  const a=parseKey(d.key), b=parseKey(d.tgt.dataset.key); if(a.rid===b.rid) return;
+  const to=allRooms().find(x=>x.key===d.tgt.dataset.key); const fr=findRoom(a.rid); const tr=findRoom(b.rid);
+  moveRoom(a.rid,b.dept,b.rid,to?to.side:null); refresh(true);
+  toast('«'+fr.r.name+'» → «'+tr.r.name+'» орнына ауысты');
+});
+$('#planWrap').addEventListener('click',e=>{ if(suppressClick) return; const g=e.target.closest('[data-dept]'); if(!g){ select(null,null); return; } if(g.dataset.dept==='hub') select('hub',null); else select(g.dataset.dept,g.dataset.key||null); });
+$('#pp').addEventListener('click',e=>{
+  const tr=e.target.closest('tr[data-key]'); if(tr){ select(ui.sel,tr.dataset.key); return; }
+  const td=e.target.closest('tr[data-dept]'); if(td){ select(td.dataset.dept,null); return; }
+  if(e.target.closest('[data-act="overview"]')){ select(null,null); return; }
+  const ab=e.target.closest('#roomEd [data-act]');
+  if(ab){
+    const rkey=$('#roomEd').dataset.rid; const f=findRoom(rkey); if(!f) return; const act=ab.dataset.act;
+    if(act==='closeRoom'){ select(ui.sel,null); return; }
+    if(act==='rSide'){ f.r.side=ab.dataset.v; refresh(true); return; }
+    if(act==='rMove'){ const j=f.i+(+ab.dataset.dir); if(j<0||j>=f.d.rooms.length) return; f.d.rooms.splice(f.i,1); f.d.rooms.splice(j,0,f.r); refresh(true); return; }
+    if(act==='rDup'){ const c=JSON.parse(JSON.stringify(f.r)); c.id=rid(); c.name=f.r.name+' (көшірме)'; c.tags=(c.tags||[]).filter(t=>t!=='auto-uch'); f.d.rooms.splice(f.i+1,0,c); ui.room=f.d.id+'.'+c.id+'.0'; refresh(true); toast('Көшірме қосылды'); return; }
+    if(act==='rDel'){ if(ab.dataset.sure!=='1'){ ab.dataset.sure='1'; ab.textContent='Иә, жою'; return; } f.d.rooms.splice(f.i,1); ui.room=null; refresh(true); toast('Кабинет жойылды'); return; }
+  }
+  if(e.target.closest('[data-act="editDept"]')){ ui.tab='depts'; ui.open[ui.sel]=true; renderSide(); const el=document.querySelector(`.dept[data-id="${ui.sel}"]`); if(el) el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+});
+$('#pp').addEventListener('input',e=>{
+  const t=e.target; const k=t.dataset.rf; if(!k||k==='dept') return; const ed=$('#roomEd'); if(!ed) return;
+  const f=findRoom(ed.dataset.rid); if(!f) return; const r=f.r;
+  if(k==='name'){ r.name=t.value||'Кабинет'; }
+  else if(k==='purpose'){ r.purpose=t.value; persist(); renderSchedule(); return; }
+  else { const v=parseFloat(t.value); if(!isFinite(v)) return;
+    if(k==='count'){ if(v<0) return; r.count=Math.min(40,Math.round(v)); if(r.count===0) ui.room=null; }
+    if(k==='area'){ if(v<1) return; r.area=Math.min(400,v); }
+    if(k==='h'){ if(v<2.4||v>6) return; r.h=v; } }
+  refresh(false,false,true);
+});
+$('#pp').addEventListener('change',e=>{
+  const t=e.target; if(t.dataset.rf!=='dept') return; const ed=$('#roomEd'); if(!ed) return;
+  const rid0=ed.dataset.rid; moveRoom(rid0,t.value,null,null); refresh(true); toast('Кабинет «'+deptById(t.value).short+'» бөлімшесіне ауысты');
+});
+$('#btnCsv').addEventListener('click',()=>download('csv'));
+$('#btnJson').addEventListener('click',()=>download('json'));
+
+const side=$('#sideBody');
+side.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.p){ const k=t.dataset.p; if(k==='autoUch') return; const v=parseFloat(t.value); if(!isFinite(v)||v<=0) return; S.p[k]=v; refresh(false); renderKPI(); return; }
+  if(t.dataset.b){ const k=t.dataset.b; if(k==='name'){ S.name=t.value||'Жаңа ғимарат'; renderKPI(); persist(); return; } const v=parseFloat(t.value); if(!isFinite(v)||v<=0) return; S.b[k]=v; refresh(false); return; }
+  const row=t.closest('.room-row'); if(row){
+    const d=deptById(t.closest('.dept').dataset.id); const r=d.rooms.find(x=>x.id===row.dataset.rid); const f=t.dataset.f;
+    if(f==='name'){ r.name=t.value; refresh(false); return; }
+    const v=parseFloat(t.value); if(!isFinite(v)||v<0) return;
+    if(f==='count') r.count=Math.min(40,Math.round(v)); else if(v>=1) r.area=Math.min(400,v);
+    row.classList.toggle('under',!!(r.min&&r.area<r.min));
+    refresh(false);
+  }
+});
+side.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.p==='autoUch'){ S.p.autoUch=t.checked; refresh(false); return; }
+  if(t.dataset.p==='shifts'){ S.p.shifts=+t.value; refresh(false); return; }
+  const dEl=t.closest('.dept'); if(!dEl) return; const d=deptById(dEl.dataset.id);
+  if(t.dataset.act==='on'){ d.on=t.checked; refresh(true); }
+  if(t.dataset.act==='floor'||t.dataset.act==='wing'){
+    d[t.dataset.act]=+t.value; const same=S.depts.filter(x=>x!==d&&x.floor===d.floor&&x.wing===d.wing); d.order=(same.length?Math.max(...same.map(x=>x.order)):0)+1; refresh(true);
+  }
+});
+side.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act],[data-shape]'); if(!b) return;
+  if(b.dataset.shape){ S.b.shape=b.dataset.shape; V.camInit=false; ui.planZoom=0; refresh(true,true); return; }
+  const act=b.dataset.act; const dEl=b.closest('.dept'); const d=dEl?deptById(dEl.dataset.id):null;
+  if(act==='open'){ ui.open[d.id]=!ui.open[d.id]; select(d.id,null); renderSide(); return; }
+  if(act==='up'||act==='down'){
+    const grp=S.depts.filter(x=>x.floor===d.floor&&x.wing===d.wing).sort((a,b)=>a.order-b.order);
+    grp.forEach((x,i)=>x.order=i+1); const i=grp.indexOf(d); const j=act==='up'?i-1:i+1; if(j<0||j>=grp.length) return;
+    const o=grp[j].order; grp[j].order=d.order; d.order=o; refresh(true); return;
+  }
+  if(act==='addRoom'){ d.rooms.push({id:rid(),name:'Жаңа кабинет',area:12,count:1,min:0,src:'P',tags:[]}); refresh(true); return; }
+  if(act==='delRoom'){ const rr=b.closest('.room-row').dataset.rid; d.rooms=d.rooms.filter(x=>x.id!==rr); if(ui.room&&ui.room.includes('.'+rr+'.')) ui.room=null; refresh(true); return; }
+  if(act==='addDept'){ const nm=($('#newDept').value||'').trim(); if(!nm){ toast('Бөлімше атауын жазыңыз'); return; }
+    const pal=['#495057','#0B7285','#5F3DC4','#2F9E44','#C2255C','#E8590C']; const id='u'+rid();
+    const same=S.depts.filter(x=>x.floor===2&&x.wing===2);
+    S.depts.push({id,name:nm,short:nm.length>18?nm.slice(0,17)+'…':nm,color:pal[S.depts.length%pal.length],floor:2,wing:2,order:(same.length?Math.max(...same.map(x=>x.order)):0)+1,on:true,kids:false,rooms:[{id:rid(),name:'Кабинет',area:12,count:1,min:0,src:'P',tags:[]}]});
+    ui.open[id]=true; ui.sel=id; refresh(true); toast('Қосылды: 2-қабат, Б қанаты — қажет болса ауыстырыңыз'); return; }
+  if(act==='saveVar'){ saveVariant(); return; }
+  if(act==='loadVar'){ loadVariant(b.closest('.var').dataset.vid); return; }
+  if(act==='delVar'){ deleteVariant(b.closest('.var').dataset.vid); return; }
+  if(act==='csv'||act==='json'){ download(act); return; }
+  if(act==='reset'){ $('#resetBox').innerHTML='<span>Барлық өзгеріс өшеді. Сенімдісіз бе?</span><button class="btn small primary" data-act="resetYes">Иә, қайтару</button><button class="btn small" data-act="resetNo">Жоқ</button>'; return; }
+  if(act==='resetYes'){ S=defaultState(); ui.sel=null; ui.room=null; V.camInit=false; refresh(true,true); toast('Бастапқы бағдарлама қайтарылды'); return; }
+  if(act==='resetNo'){ renderSide(); return; }
+});
+
+/* theme changes → rebuild 3D colors */
+const mq=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
+if(mq&&mq.addEventListener) mq.addEventListener('change',()=>build3D(false));
+new MutationObserver(()=>build3D(false)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- boot ---------- */
+applyBg();
+init3D();
+syncAuto(); LAY=computeLayout(); M=metrics();
+renderKPI(); renderSide(); renderLegend(); renderPassport(); renderChecks(); renderSchedule();
+syncToolbar();
+build3D(true);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(V.ok) build3D(false); });
+initCaps();
+})();
+
+</script>
+
+</body>
+</html>
